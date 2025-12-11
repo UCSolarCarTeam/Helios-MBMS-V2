@@ -19,7 +19,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "app_freertos.h"
-
+#include "can_tx.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -42,7 +42,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
-
+osMessageQueueId_t canTxQueueHandle;
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
@@ -80,13 +80,28 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
-  /* add queues, ... */
+	const osMessageQueueAttr_t canTxQueue_attributes = {
+	  .name = "canTxQueue"
+	};
+
+	canTxQueueHandle = osMessageQueueNew(
+	    8,                     // max number of messages
+	    sizeof(CANmsg),        // size of each message
+	    &canTxQueue_attributes // attributes (or NULL)
+	);
+
   /* USER CODE END RTOS_QUEUES */
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
+  const osThreadAttr_t canTxTask_attributes = {
+    .name       = "canTxTask",
+    .priority   = (osPriority_t) osPriorityNormal,
+    .stack_size = 256 * 4
+  };
+
+  osThreadNew(CAN_Tx_Task, NULL, &canTxTask_attributes);
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */

@@ -11,4 +11,6 @@ void CAN_Tx_Init(void);
 // Returns HAL_OK on success, or an error code from the HAL.
 HAL_StatusTypeDef CAN_Tx_Send(const CANmsg *msg);
 
+void CAN_Tx_Task(void *argument);
+
 #endif // CAN_TX_
