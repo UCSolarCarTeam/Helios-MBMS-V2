@@ -20,6 +20,8 @@
 /* Includes ------------------------------------------------------------------*/
 #include "app_freertos.h"
 #include "can_tx.h"
+#include "can_rx.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -102,6 +104,14 @@ void MX_FREERTOS_Init(void) {
   };
 
   osThreadNew(CAN_Tx_Task, NULL, &canTxTask_attributes);
+
+  const osThreadAttr_t canRxTask_attributes = {
+	.name 		= "canRxTask",
+	.priority   = (osPriority_t) osPriorityNormal,
+    .stack_size = 256 * 4
+  };
+
+  osThreadNew(CAN_Rx_Task, NULL, &canRxTask_attributes);
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
