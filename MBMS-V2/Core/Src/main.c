@@ -20,6 +20,8 @@
 #include "main.h"
 #include "cmsis_os2.h"
 #include "can_tx.h"
+#include "can_rx.h"
+#include "app_freertos.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -186,7 +188,7 @@ static void MX_FDCAN1_Init(void)
   hfdcan1.Instance = FDCAN1;
   hfdcan1.Init.ClockDivider = FDCAN_CLOCK_DIV1;
   hfdcan1.Init.FrameFormat = FDCAN_FRAME_CLASSIC;
-  hfdcan1.Init.Mode = FDCAN_MODE_NORMAL;
+  hfdcan1.Init.Mode = FDCAN_MODE_INTERNAL_LOOPBACK;
   hfdcan1.Init.AutoRetransmission = DISABLE;
   hfdcan1.Init.TransmitPause = DISABLE;
   hfdcan1.Init.ProtocolException = DISABLE;
@@ -199,13 +201,27 @@ static void MX_FDCAN1_Init(void)
   hfdcan1.Init.DataTimeSeg1 = 1;
   hfdcan1.Init.DataTimeSeg2 = 1;
   hfdcan1.Init.StdFiltersNbr = 0;
-  hfdcan1.Init.ExtFiltersNbr = 0;
+  hfdcan1.Init.ExtFiltersNbr = 1;
   hfdcan1.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
   if (HAL_FDCAN_Init(&hfdcan1) != HAL_OK)
   {
     Error_Handler();
   }
   /* USER CODE BEGIN FDCAN1_Init 2 */
+  FDCAN_FilterTypeDef sFilterConfig = {0};
+
+  sFilterConfig.IdType 			= FDCAN_EXTENDED_ID; //used in canmsg
+  sFilterConfig.FilterIndex		=0;
+  sFilterConfig.FilterType 		= FDCAN_FILTER_RANGE_NO_EIDM;
+  sFilterConfig.FilterConfig	= FDCAN_FILTER_TO_RXFIFO0;
+  sFilterConfig.FilterID1 		=0X00000000;
+  sFilterConfig.FilterID2		=0x1FFFFFFF;
+
+  if(HAL_FDCAN_ConfigFilter(&hfdcan1, &sFilterConfig) != HAL_OK)
+
+  {
+	  Error_Handler();
+  }
 
   /* USER CODE END FDCAN1_Init 2 */
 

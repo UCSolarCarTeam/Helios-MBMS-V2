@@ -21,7 +21,7 @@
 #include "app_freertos.h"
 #include "can_tx.h"
 #include "can_rx.h"
-
+#include "CAN.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -130,10 +130,29 @@ void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN defaultTask */
   /* Infinite loop */
-  for(;;)
+(void)argument;
+
+  CANmsg txMsg;
+  txMsg.extendedID = 0x100;
+  txMsg.ID 		   = 0x100;
+  txMsg.DLC		   = FDCAN_DLC_BYTES_8; //8 BYTE PAYLOAD
+
+  txMsg.data[0] = 0x11;
+  txMsg.data[1] = 0x22;
+  txMsg.data[2] = 0x33;
+  txMsg.data[3] = 0x44;
+  txMsg.data[4] = 0x55;
+  txMsg.data[5] = 0x66;
+  txMsg.data[6] = 0x77;
+  txMsg.data[7] = 0x88;
+
+  for (;;)
   {
-    osDelay(1);
+	  osMessageQueuePut(canTxQueueHandle, &txMsg, 0, 0);
+
+	  osDelay(1000);
   }
+
   /* USER CODE END defaultTask */
 }
 
