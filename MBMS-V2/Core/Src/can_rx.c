@@ -14,11 +14,23 @@ extern FDCAN_HandleTypeDef hfdcan1; //defined in main.c
 
 void CAN_Rx_Task(void *argument)
 {
-	(void)argument; //shutting compiler up lol
+	for(;;) {//RTOS tasks run forever. CAN_Rx_Task will sit in this forever loop always checking for new CAN frames.
+		CAN_Rx();
+	}
+}
+
+void CAN_Rx() {
+
+	// DEQUEUE
+	// CHECK WHAT MSG IT IS (EID)
+	// SPLIT INTO 2 DIFF QUEUES (contactors, battery/orion)
+
+}
+
+void HAL_FDCAN_RxFifo0Callback (FDCAN_HandleTypeDef * hfdcan, uint32_t RxFifo0ITs) {
 	CANmsg msg;
 	FDCAN_RxHeaderTypeDef rxHeader;
 
-	for(;;) //RTOS tasks run forever. CAN_Rx_Task will sit in this forever loop always checking for new CAN frames.
 	{
 		if(HAL_FDCAN_GetRxFifoFillLevel(&hfdcan1,FDCAN_RX_FIFO0)>0U) //&hfdcan1 is the CAN peripheral, FDCAN_RX/////-FIFO0 tells HALL to check FIFO 0, this function will return a number which will tell us how many messages are currently stored in RX FIFO
 
@@ -31,10 +43,16 @@ void CAN_Rx_Task(void *argument)
 				msg.DLC						= rxHeader.DataLength;
 
 			}
+			// ADD DATA AS WELL
 		}
 
 		osDelay(1);
 
 	}
+	// ADD TO A QUEUE
+
 }
+
+
+
 
