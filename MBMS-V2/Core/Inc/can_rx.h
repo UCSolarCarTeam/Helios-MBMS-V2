@@ -5,8 +5,8 @@
  *      Author: helay
  */
 
-#ifndef CAN_RX
-#define CAN_RX
+#ifndef CAN_RX_
+#define CAN_RX_
 
 #include "CAN.h"
 

@@ -1,0 +1,3 @@
+../Core/Src/can_rx.c:20:6:CAN_Rx_Task	1
+../Core/Src/can_rx.c:29:13:CAN_Rx	10
+../Core/Src/can_rx.c:67:6:HAL_FDCAN_RxFifo0Callback	3

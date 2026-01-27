@@ -104,6 +104,11 @@ int main(void)
   /* Call init function for freertos objects (in app_freertos.c) */
   MX_FREERTOS_Init();
 
+  if (HAL_FDCAN_ActivateNotification(&hfdcan1, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0) != HAL_OK)
+     {
+         Error_Handler();
+     }
+
   /* Start scheduler */
   osKernelStart();
 

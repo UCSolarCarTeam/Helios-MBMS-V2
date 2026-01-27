@@ -75,7 +75,7 @@ void CAN_Tx_Task(void *argument) //tasks run forever if theres nothing to return
 
 		}
 
-		(void)CAN_Tx_Send(&msg);
+		CAN_Tx_Send(&msg);
 		// CAN_Tx_Send(&msg) transmits the CAN frame using the HAL
 		//CAN_Tx_Send returns HAL_StatusTypeDef(HAL_OK ECT)
 
