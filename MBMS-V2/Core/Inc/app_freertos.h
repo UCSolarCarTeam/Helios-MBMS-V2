@@ -37,6 +37,7 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
+extern osThreadId_t startupTaskHandle;
 
 /* USER CODE END ET */
 

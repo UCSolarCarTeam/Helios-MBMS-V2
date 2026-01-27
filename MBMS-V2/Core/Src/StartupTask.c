@@ -1,310 +1,261 @@
+/* Include statements */
 #include "../Inc/StartupTask.h"
 #include "main.h"
 #include "cmsis_os.h"
-
-/* ============================================================================
- * StartupTask.c
- *
- * Purpose (matches the linear flowchart):
- *   1) Startup task begins
- *   2) Wait until MPS is ON (soft timeout)
- *   3) Wait until ESD is NOT pressed (soft timeout)
- *   4) Run startup checks (BCT)
- *   5) Give permission: Common contactor
- *   6) Give permission: LV contactor
- *   7) Enable DCDC1 (switch Aux -> Main battery)
- *   8) Enable 12V CAN
- *   9) Give permission: Motor contactor
- *  10) Give permission: Array contactor
- *  11) Update state = DONE
- *  12) Terminate startup task
- * ============================================================================
- */
+#include <stdbool.h>
+#include <stdint.h>
+#include "MBMS.h"
+#include "app_freertos.h"
 
 
-/* ================================ TIMING CONFIG ============================= */
 
-/* How long we wait for MPS to turn on before failing (soft limit) */
-#define MPS_SOFT_LIMIT_MS   10000U
 
-/* How long we wait for ESD to be released before failing (soft limit) */
+
+/* =============================== CONFIG =============================== */
+
+/* Soft timeout for waiting on ESD release (ms). If exceeded, shutdown + exit task. */
 #define ESD_SOFT_LIMIT_MS   2000U
 
-/* How often we poll inputs while waiting */
+/* Polling delay used while waiting for MPS/ESD state changes (ms). */
 #define POLL_DELAY_MS       10U
 
 
-/* ================================ RTOS HANDLES ==============================
- * These are created by CubeMX in freertos.c.
- * - startupTaskHandle: handle for this task (used to terminate it)
- * - contactorPermissionsFlagHandle: event flags used to grant permissions
- */
-extern osThreadId_t     startupTaskHandle;
-extern osEventFlagsId_t contactorPermissionsFlagHandle;
 
 
-/* =============================== GLOBAL STATUS ==============================
- * Global MBMS status instance.
- * Other tasks can read this to see where startup is in the flowchart.
+/* =============================== GLOBAL STATUS ============================== */
+/* Global MBMS status instance.
+ * Other tasks can read mbmsStatus.startupState to know where startup is.
  */
 MBMS_Status_t mbmsStatus = {0};
+
+// carState will be defined in BCT instead, just putting thus here for now to avoid buiod errors
+uint8_t carState = BOOT; // make enum for a diffrent state (check millaine code in header file).
+
+extern uint8_t startupCheck_Counter = 0;
+
+/* ============================ PERMISSIONS (NO FLAGS) ========================= */
+/* Global permissions structure.
+ * StartupTask sets these "allow_*" booleans; other tasks read them to decide
+ * whether to close contactors / enable systems.
+ */
+extern ContactorPermissions_t gContactorPerms = {0};
+
+
+
 
 
 /* ============================== HELPER FUNCTIONS ============================ */
 
-/* Convert milliseconds into RTOS ticks (used for timeouts) */
+/* Convert milliseconds to RTOS ticks.
+ * - Uses osKernelGetTickFreq() to compute ticks/second
+ * - Uses 64-bit math to avoid overflow
+ * - Rounds up by adding 999 before dividing by 1000
+ */
 static uint32_t ms_to_ticks(uint32_t ms)
 {
-    /* Multiply ms by tick frequency, then convert to seconds scale */
-    return (ms * osKernelGetTickFreq()) / 1000U;
+    uint64_t ticks = (uint64_t)ms * (uint64_t)osKernelGetTickFreq();
+    return (uint32_t)((ticks + 999ULL) / 1000ULL);
 }
 
+uint8_t read_Main_Contactor() {
+	return HAL_GPIO_ReadPin(MAIN_CONTACTOR_ON_GPIO_Port, MAIN_CONTACTOR_ON_Pin);
+}
 
-/* Read whether the Manual Power Switch (MPS) is ON */
+uint8_t read_Common_Contactor() {
+	return HAL_GPIO_ReadPin(COMMON_CONTACTOR_ON_GPIO_Port, COMMON_CONTACTOR_ON_Pin);
+}
+/* Read whether the Manual Power Switch (MPS) is ON.
+ * - If the GPIO symbols exist, read the pin and compare to active level
+ * - If not defined yet, return true (so development/testing can proceed)
+ */
 static bool is_mps_on(void)
 {
 #if defined(MPS_GPIO_Port) && defined(MPS_Pin)
-    /* Read the GPIO pin and compare to the active level for MPS */
-    return (HAL_GPIO_ReadPin(MPS_GPIO_Port, MPS_Pin) == MPS_ACTIVE_LEVEL);
+    return (HAL_GPIO_ReadPin(MPS_GPIO_Port, MPS_Pin) == MPS_ACTIVE_LEVEL); // Define "MPS_ACTIVE_LEVEL" //
 #else
-    /* If the pin is not defined yet, assume ON so startup code can run */
+    return false;
+#endif
+}
+
+/* Read whether the Emergency Stop (ESD) is pressed.
+ * - If the GPIO symbols exist, read the pin and compare to active level
+ * - If not defined yet, return false (assume not pressed)
+ */
+static bool is_esd_pressed(void)
+{
+#if defined(ESD_GPIO_Port) && defined(ESD_Pin)
+    return (HAL_GPIO_ReadPin(ESD_GPIO_Port, ESD_Pin) == ESD_ACTIVE_LEVEL);
+#else
     return true;
 #endif
 }
 
 
-/* Read whether the Emergency Stop (ESD) is pressed */
-static bool is_esd_pressed(void)
-{
-#if defined(ESD_GPIO_Port) && defined(ESD_Pin)
-    /* Read the GPIO pin and compare to the active level for ESD */
-    return (HAL_GPIO_ReadPin(ESD_GPIO_Port, ESD_Pin) == ESD_ACTIVE_LEVEL);
-#else
-    /* If the pin is not defined yet, assume NOT pressed */
-    return false;
-#endif
-}
 
 
-/* ============================ PERMISSION HELPERS ============================
- * These wrap RTOS event flags, so "permissions" are easier to manage.
- * In this design, StartupTask sets permission bits; other tasks respond to them.
+
+
+
+
+
+
+
+
+/* ============================ PERMISSION HELPERS ============================ */
+/* No RTOS event flags here: CHANGE #3
+ * - These helpers simply set global booleans in gContactorPerms.
+ * - Other tasks should read gContactorPerms.allow_* and act accordingly.
  */
-
-/* Clear a specific permission bit (unused for now, but kept for future use) */
-static void __attribute__((unused)) perms_clear(uint32_t mask)
+static void allow_common_contactor(void)
 {
-    /* Clear the event flag bits specified in mask */
-    osEventFlagsClear(contactorPermissionsFlagHandle, mask);
+    gContactorPerms.allow_common = 1;  /* permission: common contactor may close */
 }
 
-/* Check if a permission bit is currently set (unused for now, but kept) */
-static bool __attribute__((unused)) perms_is_set(uint32_t mask)
+static void allow_lv_contactor(void)
 {
-    /* Read current flags and check if the masked bits are set */
-    return (osEventFlagsGet(contactorPermissionsFlagHandle) & mask) != 0U;
+    gContactorPerms.allow_lv = 1;      /* permission: LV contactor may close */
 }
 
-
-/* ============================= FAILURE HANDLING =============================
- * Flowchart fail states (left side).
- * Called when:
- *  - MPS timeout
- *  - ESD timeout
- *  - startup checks failed
- *
- * Future behavior should include things like:
- *  - open contactors / revoke permissions
- *  - set fault flags
- *  - log the failure reason
- */
-static void startup_fail_shutdown(void)
+static void allow_motor_contactor(void)
 {
-    /* TODO: implement real shutdown behavior */
+    gContactorPerms.allow_motor = 1;   /* permission: motor contactor(s) may close */
+}
+
+static void allow_array_contactor(void)
+{
+    gContactorPerms.allow_array = 1;   /* permission: array contactor may close */
 }
 
 
-/* ============================== STARTUP CHECKS ==============================
- * The BatteryControlTask (BCT) will eventually implement real checks.
- * This is declared weak so BCT can override it later.
- */
-__attribute__((weak)) bool BCT_AreStartupChecksOk(void)
-{
-    /* Fail-safe default: if nothing overrides this, checks are NOT ok */
-    return false;   /* fail-safe default */
-}
+
 
 
 /* ============================ MAIN STARTUP FLOW ============================= */
-
-/* Set specific permission bits to allow contactors/systems */
-static void perms_set(uint32_t mask)
-{
-    /* Set the event flag bits specified by mask */
-    osEventFlagsSet(contactorPermissionsFlagHandle, mask);
-}
-
-
+/* Implements the startup sequence as a single linear flow.
+ * Updates mbmsStatus.startupState at each major step for observability.
+ */
 static void Startup_Flowchart(void)
 {
-    /* =========================================================================
-     * FLOWCHART BLOCK: Startup Task Begins
-     * - Mark state as waiting for MPS
-     * =========================================================================
-     */
-    mbmsStatus.startupState = STARTUP_MPS_OPEN;
+    /* Startup begins: explicit state so other tasks/logs know startup was entered */
+    mbmsStatus.startupState = STARTUP_START;
 
+    /* -------------------------------------------------------------------------
+     * Wait until MPS is ON
+     * - NO timeout (MPS is a user/system readiness condition, not a battery fault)
+     * - Polls every POLL_DELAY_MS to avoid busy-waiting
+     * ------------------------------------------------------------------------- */
+    mbmsStatus.startupState = STARTUP_MPS_OPEN; /* Change #1 */
 
-    /* =========================================================================
-     * FLOWCHART BLOCK: Wait until MPS is ON (soft timeout)
-     * - Poll MPS every POLL_DELAY_MS
-     * - If timeout expires, go to fail state: "MPS timeout -> shutdown"
-     * =========================================================================
-     */
+    while (!is_mps_on())  /* Change #4*/
     {
-        uint32_t start = osKernelGetTickCount();         /* capture start time */
-        uint32_t limit = ms_to_ticks(MPS_SOFT_LIMIT_MS); /* convert ms to ticks */
-
-        while (!is_mps_on())                             /* loop until MPS becomes ON */
-        {
-            osDelay(POLL_DELAY_MS);                      /* sleep so we don't busy-wait */
-
-            if ((osKernelGetTickCount() - start) >= limit) /* check if timeout reached */
-            {
-                /* Fail State: MPS timeout -> Shutdown */
-                startup_fail_shutdown();                 /* run shutdown handler */
-                osThreadTerminate(startupTaskHandle);    /* stop this task immediately */
-            }
-        }
+        osDelay(POLL_DELAY_MS);   /* yield CPU while waiting */
+        /* no timeout, no shutdown */
     }
 
-    /* =========================================================================
-     * FLOWCHART NOTE: MPS is now ON, so we can continue
-     * =========================================================================
-     */
+    /* MPS is now ON */
     mbmsStatus.startupState = STARTUP_MPS_CLOSED;
 
+    /* -------------------------------------------------------------------------
+     * Wait until ESD is NOT pressed (soft timeout)
+     * - If ESD remains pressed longer than ESD_SOFT_LIMIT_MS:
+     *   -> call shutdown handler and exit the thread
+     * ------------------------------------------------------------------------- */
+    mbmsStatus.startupState = STARTUP_ESD_WAITING;
 
-    /* =========================================================================
-     * FLOWCHART BLOCK: Wait until ESD is NOT pressed (soft timeout)
-     * - Poll ESD every POLL_DELAY_MS while ESD is pressed
-     * - If timeout expires, go to fail state: "ESD pressed -> shutdown"
-     * =========================================================================
-     */
-    {
-        uint32_t start = osKernelGetTickCount();         /* capture start time */
-        uint32_t limit = ms_to_ticks(ESD_SOFT_LIMIT_MS); /* convert ms to ticks */
 
-        while (is_esd_pressed())                         /* loop while ESD is pressed */
-        {
-            osDelay(POLL_DELAY_MS);                      /* sleep between polls */
+	while (is_esd_pressed())
+	{
+		osDelay(POLL_DELAY_MS);  /* wait between polls */
 
-            if ((osKernelGetTickCount() - start) >= limit) /* check if timeout reached */
-            {
-                /* Fail State: ESD pressed too long -> Shutdown */
-                startup_fail_shutdown();                 /* run shutdown handler */
-                osThreadTerminate(startupTaskHandle);    /* stop this task immediately */
-            }
-        }
+
+		if (carState == BPS_FAULT) {
+			osThreadTerminate(startupTaskHandle);
+
+		}
+	}
+
+
+    /* ESD is released */
+    mbmsStatus.startupState = STARTUP_ESD_RELEASED;
+
+    while (read_Common_Contactor() != MAIN_CONTACTOR_ON_ACTIVE || read_Main_Contactor() != COMMON_CONTACTOR_ON_ACTIVE) {
+
+    }
+
+    mbmsStatus.startupState = MAIN_COMMON_CLOSED;
+
+
+
+    // delays this task, so BCT can run startup checks more times
+    while (startupCheck_Counter < 5) {
+    	osDelay(200);
+
     }
 
 
-    /* =========================================================================
-     * FLOWCHART BLOCK: Checks OK?
-     * - Increment a counter showing checks were attempted
-     * - Ask BCT if startup checks passed
-     * - If checks fail, go to fail state: "Startup checks failed -> shutdown"
-     * =========================================================================
-     */
-    mbmsStatus.startupChecksRunCount++;                  /* record that checks ran */
-
-    if (!BCT_AreStartupChecksOk())                       /* call check function */
-    {
-        /* Fail State: startup checks failed -> Shutdown */
-        startup_fail_shutdown();                         /* run shutdown handler */
-        osThreadTerminate(startupTaskHandle);            /* stop this task */
-    }
+    /* Checks completed successfully */
+    mbmsStatus.startupState = STARTUP_CHECKS_COMPLETED;
 
 
-    /* =========================================================================
-     * FLOWCHART BLOCK: Give permission: Common contactor
-     * - Set permission flag so another task can actually close it
-     * - Update startup state to show we've reached this step
-     * =========================================================================
-     */
-    perms_set(PERM_COMMON_CONTACTOR);                    /* allow common contactor */
-    mbmsStatus.startupState = STARTUP_COMMON_CLOSED;     /* update progress state */
 
+    /* Permissions: LV contactor */
+    allow_lv_contactor();
+    mbmsStatus.startupState = STARTUP_LV_CLOSED;
 
-    /* =========================================================================
-     * FLOWCHART BLOCK: Give permission: LV contactor
-     * =========================================================================
-     */
-    perms_set(PERM_LV_CONTACTOR);                        /* allow LV contactor */
-    mbmsStatus.startupState = STARTUP_LV_CLOSED;         /* update progress state */
-
-
-    /* =========================================================================
-     * FLOWCHART BLOCK: Enable DCDC1 (switch Aux -> Main battery)
-     * - Only executes if the GPIO definitions exist
-     * =========================================================================
-     */
-#if defined(DCDC1_EN_GPIO_Port) && defined(DCDC1_EN_Pin)
-    HAL_GPIO_WritePin(DCDC1_EN_GPIO_Port, DCDC1_EN_Pin, DCDC1_ENABLE_LEVEL); /* drive enable pin */
+    /* -------------------------------------------------------------------------
+     * Enable DCDC1 (Aux -> Main battery switching)
+     * - Only compiles if GPIO macros exist
+     * - Then updates state to record DCDC1 enabled
+     * ------------------------------------------------------------------------- */
+#if defined(DCDC1_EN_GPIO_Port) && defined(DCDC1_EN_Pin) /* Change #2*/
+    HAL_GPIO_WritePin(DCDC1_EN_GPIO_Port, DCDC1_EN_Pin, DCDC1_ENABLE_LEVEL);
 #endif
-    mbmsStatus.startupState = STARTUP_DCDC1_ON;          /* record DCDC enabled step */
+    mbmsStatus.startupState = STARTUP_DCDC1_ON;
 
-
-    /* =========================================================================
-     * FLOWCHART BLOCK: Enable 12V CAN (front-of-car systems power)
-     * - Only executes if the GPIO definitions exist
-     * =========================================================================
-     */
+    /* -------------------------------------------------------------------------
+     * Enable 12V CAN / front-of-car system power
+     * - Only compiles if GPIO macros exist
+     * - Updates state to record CAN12V enable step
+     * ------------------------------------------------------------------------- */
 #if defined(CAN12V_EN_GPIO_Port) && defined(CAN12V_EN_Pin)
-    HAL_GPIO_WritePin(CAN12V_EN_GPIO_Port, CAN12V_EN_Pin, CAN12V_ENABLE_LEVEL); /* drive enable pin */
+    HAL_GPIO_WritePin(CAN12V_EN_GPIO_Port, CAN12V_EN_Pin, CAN12V_ENABLE_LEVEL);
 #endif
+    mbmsStatus.startupState = STARTUP_CAN12V_ON;  /* state added for visibility */
 
+    /* Permissions: Motor contactor */
+    allow_motor_contactor();
+    mbmsStatus.startupState = STARTUP_MOTORS_ENABLED;
 
-    /* =========================================================================
-     * FLOWCHART BLOCK: Give permission: Motor contactor
-     * =========================================================================
-     */
-    perms_set(PERM_MOTOR_CONTACTOR);                     /* allow motor contactor(s) */
-    mbmsStatus.startupState = STARTUP_MOTORS_ENABLED;    /* update progress state */
+    /* -------------------------------------------------------------------------
+     * Permissions: Array contactor
+     * - NOTE: confirm whether "array contactor" implies charging vs just solar connect
+     * - Updates state to record array permission step
+     * ------------------------------------------------------------------------- */
+    /* NOTE: confirm with team if "array contactor" implies charging or just solar connect */
+    allow_array_contactor();
+    mbmsStatus.startupState = STARTUP_ARRAY_ENABLED;
 
+    /* Startup flow complete */
+    mbmsStatus.startupState = STARTUP_DONE;
 
-    /* =========================================================================
-     * FLOWCHART BLOCK: Give permission: Array contactor
-     * - Note: comment indicates we do NOT allow charging during startup
-     * =========================================================================
-     */
-    /* We do NOT allow charging during startup */
-    perms_set(PERM_ARRAY_CONTACTOR);                     /* allow array contactor */
-
-
-    /* =========================================================================
-     * FLOWCHART BLOCK: Startup complete (Update startup state = DONE)
-     * =========================================================================
-     */
-    mbmsStatus.startupState = STARTUP_DONE;              /* indicate startup is complete */
-
-    /* =========================================================================
-     * FLOWCHART BLOCK: Terminate Startup Task
-     * =========================================================================
-     */
-    osThreadTerminate(startupTaskHandle);                /* delete/terminate this task */
+    /* Exit thread cleanly (CMSIS-RTOS2) */
+    osThreadTerminate(startupTaskHandle);
 }
+
+
+
 
 
 /* =============================== TASK ENTRY ================================= */
-
+/* FreeRTOS/CMSIS task entry point.
+ * Runs the startup flow and exits the thread when complete.
+ */
 void StartupTask(void *argument)
 {
-    (void)argument;                                      /* unused parameter */
+    (void)argument;      /* argument not used */
 
-    /* Run the full startup sequence (matches the flowchart order) */
-    Startup_Flowchart();
+    Startup_Flowchart(); /* run the full startup sequence */
 
-    /* Safety fallback in case the flow ever returns */
+    /* Safety fallback in case Startup_Flowchart ever returns */
     osThreadTerminate(startupTaskHandle);
 }
