@@ -19,9 +19,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "app_freertos.h"
-#include "can_tx.h"
-#include "can_rx.h"
-#include "CAN.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -115,6 +113,12 @@ void MX_FREERTOS_Init(void) {
 	    sizeof(CANmsg),        // size of each message
 	    &canTxQueue_attributes // attributes (or NULL)
 	);
+	canRxQueueHandle = osMessageQueueNew(
+			    8,                     // max number of messages
+			    sizeof(CANmsg),        // size of each message
+			    &canRxQueue_attributes // attributes (or NULL)
+			);
+
 
   /* USER CODE END RTOS_QUEUES */
   /* creation of defaultTask */
