@@ -12,6 +12,8 @@
 
 extern FDCAN_HandleTypeDef hfdcan1; //defined in main.c
 extern osMessageQueueId_t canRxQueueHandle;
+extern osMessageQueueId_t BatteryQueueHandle;
+extern osMessageQueueId_t ContactorQueueHandle;
 
 volatile uint32_t g_rx_cb_hits = 0;
 
@@ -61,6 +63,12 @@ static void CAN_Rx()
 	// DEQUEUE
 	// CHECK WHAT MSG IT IS (EID)
 	// SPLIT INTO 2 DIFF QUEUES (contactors, battery/orion)
+
+
+    if (status == osOK) return;
+    //temporary until starting message task
+    osMessageQueueId_t dst = (msg.extendedID & 1U) ? contactorQueueHandle : batteryQueueHandle;
+    (void)osMessageQueuePut(dst, &msg, 0, 0);
 
 }
 

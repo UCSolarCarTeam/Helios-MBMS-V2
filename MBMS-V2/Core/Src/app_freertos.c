@@ -57,6 +57,18 @@ const osThreadAttr_t canRxTask_attributes = {
 	.priority   = (osPriority_t) osPriorityNormal,
     .stack_size = 256 * 4
   };
+osThreadId_t ContactorsTaskHandle;
+const osThreadAttr_t Contactors_attributes = {
+	.name 		= "ContactorsTask",
+	.priority   = (osPriority_t) osPriorityNormal,
+    .stack_size = 256 * 4
+  };
+osThreadId_t BatteryTaskHandle;
+const osThreadAttr_t Battery_attributes = {
+	.name 		= "BatteryTask",
+	.priority   = (osPriority_t) osPriorityNormal,
+    .stack_size = 256 * 4
+  };
 
 //Queue Handles
 osMessageQueueId_t canTxQueueHandle;
@@ -69,7 +81,15 @@ const osMessageQueueAttr_t canRxQueue_attributes = {
 	  .name = "canRxQueue"
 	};
 
+osMessageQueueId_t ContactorsQueueHandle;
+const osMessageQueueAttr_t contactors_attributes = {
+	  .name = "contactorsQueue"
+	};
 
+osMessageQueueId_t BatteryQueueHandle;
+const osMessageQueueAttr_t battery_attributes = {
+	  .name = "batteryQueue"
+	};
 
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
@@ -116,6 +136,24 @@ void MX_FREERTOS_Init(void) {
 	    &canTxQueue_attributes // attributes (or NULL)
 	);
 
+	canRxQueueHandle = osMessageQueueNew(
+			    8,                     // max number of messages
+			    sizeof(CANmsg),        // size of each message
+			    &canRxQueue_attributes // attributes (or NULL)
+			);
+
+	ContactorsQueueHandle = osMessageQueueNew(
+				    8,                     // max number of messages
+				    sizeof(CANmsg),        // size of each message
+				    &contactors_attributes // attributes (or NULL)
+				);
+
+	BatteryQueueHandle = osMessageQueueNew(
+				    8,                     // max number of messages
+				    sizeof(CANmsg),        // size of each message
+				    &battery_attributes // attributes (or NULL)
+				);
+
   /* USER CODE END RTOS_QUEUES */
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
@@ -124,6 +162,8 @@ void MX_FREERTOS_Init(void) {
 
   canTxTaskHandle = osThreadNew(CAN_Tx_Task, NULL, &canTxTask_attributes);
   canRxTaskHandle = osThreadNew(CAN_Rx_Task, NULL, &canRxTask_attributes);
+  ContactorsTaskHandle = osThreadNew(ContactorsTask, NULL, &Contactors_attributes);
+  BatteryTaskHandle = osThreadNew(BatteryTask, NULL, &Battery_attributes);
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -144,23 +184,9 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
 (void)argument;
 
-  CANmsg txMsg;
-  txMsg.extendedID = 0x100;
-  txMsg.ID 		   = 0x100;
-  txMsg.DLC		   = FDCAN_DLC_BYTES_8; //8 BYTE PAYLOAD
-
-  txMsg.data[0] = 0x11;
-  txMsg.data[1] = 0x22;
-  txMsg.data[2] = 0x33;
-  txMsg.data[3] = 0x44;
-  txMsg.data[4] = 0x55;
-  txMsg.data[5] = 0x66;
-  txMsg.data[6] = 0x77;
-  txMsg.data[7] = 0x88;
 
   for (;;)
   {
-	  osMessageQueuePut(canTxQueueHandle, &txMsg, 0, 0);
 
 	  osDelay(1000);
   }
