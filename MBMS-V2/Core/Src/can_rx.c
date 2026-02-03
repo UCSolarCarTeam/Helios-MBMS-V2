@@ -9,6 +9,7 @@
 #include "can_rx.h"
 #include "main.h"
 #include "cmsis_os2.h"
+#include "CAN.h"
 
 extern FDCAN_HandleTypeDef hfdcan1; //defined in main.c
 extern osMessageQueueId_t canRxQueueHandle;
@@ -16,7 +17,11 @@ extern osMessageQueueId_t BatteryQueueHandle;
 extern osMessageQueueId_t ContactorQueueHandle;
 
 volatile uint32_t g_rx_cb_hits = 0;
+volatile uint32_t messages_got_yay=0;
+volatile uint32_t batteryqueuefull=0;
+volatile uint32_t contactorqueuefull=0;
 
+volatile uint32_t orion_message_added=0;
 static void CAN_Rx(void);
 
 void CAN_Rx_Task(void *argument)
@@ -31,44 +36,57 @@ void CAN_Rx_Task(void *argument)
 static void CAN_Rx()
 {
 
+
  CANmsg msg;
 
  osStatus_t status = osMessageQueueGet(canRxQueueHandle, &msg, 0, osWaitForever);
 
- if(status != osOK)
- {
+ 	 if(status != osOK)
+ 	 {
+ 		 Error_Handler();
 
- if (msg.extendedID == 0x100 &&
-           msg.DLC == FDCAN_DLC_BYTES_8 &&
-           msg.data[0] == 0x11 &&
-           msg.data[1] == 0x22 &&
-           msg.data[2] == 0x33 &&
-           msg.data[3] == 0x44 &&
-           msg.data[4] == 0x55 &&
-           msg.data[5] == 0x66 &&
-           msg.data[6] == 0x77 &&
-           msg.data[7] == 0x88)
- {
 	 //HAL_GPIO_TogglePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
- }
- //else if (status == osOK){
-	 //uint32_t eID = msg.extendedID;
+ 	 }
 
-	// if(eID == PACK_INFO_ID || eID == TEMPINFOID || eID == MAXMINVOLTAGESID){
+ 	 else if (status == osOK)
+ 	 {
 
-		// status = osMessageQueuePut(batteryControlMessageQueueHandle, &msg, 0, osWaitForever);
-		 	// if(status != osOK){
-//}
- }
+ 		 messages_got_yay++;
+
+
+ 		 if(msg.extendedID == PACK_INFO || msg.extendedID == TEMP_INFO || msg.extendedID == CELL_VOLTAGES || msg.extendedID == MIN_MAX_VOLTAGES )
+ 		 {
+
+ 			 status = osMessageQueuePut(BatteryQueueHandle, &msg, 0, osWaitForever);
+
+ 			 if(status != osOK)
+ 			 {
+ 				 batteryqueuefull++;
+
+ 			 }
+
+			 else
+			 {
+				 orion_message_added++;
+			 }
+ 		 }
+
+
+ 		 else if((msg.extendedID & CONTACTOR_MASK) == CONTACTOR_HEARTBEAT)
+ 		 {
+ 			status = osMessageQueuePut(ContactorQueueHandle, &msg, 0, osWaitForever);
+ 			if(status != osOK)
+ 			{
+ 			 	contactorqueuefull++;
+ 		    }
+ 			//else
+
+ 		 }
+ 	 }
+
 	// DEQUEUE
 	// CHECK WHAT MSG IT IS (EID)
 	// SPLIT INTO 2 DIFF QUEUES (contactors, battery/orion)
-
-
-    if (status == osOK) return;
-    //temporary until starting message task
-    osMessageQueueId_t dst = (msg.extendedID & 1U) ? contactorQueueHandle : batteryQueueHandle;
-    (void)osMessageQueuePut(dst, &msg, 0, 0);
 
 }
 
@@ -82,13 +100,14 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef * hfdcan, uint32_t RxFifo0ITs
 	    CANmsg msg = {0};
 	    FDCAN_RxHeaderTypeDef rxHeader;
 
-		if (HAL_FDCAN_GetRxMessage(&hfdcan, FDCAN_RX_FIFO0, &rxHeader, msg.data) != HAL_OK)//Try and read one CAN frame from the RX FIFO
-
+		if (HAL_FDCAN_GetRxMessage(&hfdcan1, FDCAN_RX_FIFO0, &rxHeader, msg.data) != HAL_OK)//Try and read one CAN frame from the RX FIFO
+		{
 			return;
+		}
 
-			msg.extendedID				= rxHeader.Identifier; //full id no matter what
-			msg.ID						= (uint16_t)(rxHeader.Identifier & 0x7FF); //mask CAN id with 0x7ff to keep the 11 bits
-			msg.DLC						= rxHeader.DataLength;
+		msg.extendedID				= rxHeader.Identifier; //full id no matter what
+		msg.ID						= (uint16_t)(rxHeader.Identifier & 0x7FF); //mask CAN id with 0x7ff to keep the 11 bits
+		msg.DLC						= rxHeader.DataLength;
 
 		(void)osMessageQueuePut(canRxQueueHandle, &msg, 0, 0);
 }

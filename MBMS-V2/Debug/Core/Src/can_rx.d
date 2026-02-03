@@ -25,7 +25,8 @@ Core/Src/can_rx.o: ../Core/Src/can_rx.c ../Core/Inc/can_rx.h \
  ../Drivers/STM32H5xx_HAL_Driver/Inc/stm32h5xx_hal_pwr_ex.h \
  ../Drivers/STM32H5xx_HAL_Driver/Inc/stm32h5xx_hal_exti.h \
  ../Drivers/STM32H5xx_HAL_Driver/Inc/stm32h5xx_hal_fdcan.h \
- ../Middlewares/Third_Party/CMSIS/RTOS2/Include/cmsis_os2.h
+ ../Middlewares/Third_Party/CMSIS/RTOS2/Include/cmsis_os2.h \
+ ../Core/Inc/CAN.h
 ../Core/Inc/can_rx.h:
 ../Core/Inc/CAN.h:
 ../Core/Inc/main.h:
@@ -55,3 +56,4 @@ Core/Src/can_rx.o: ../Core/Src/can_rx.c ../Core/Inc/can_rx.h \
 ../Drivers/STM32H5xx_HAL_Driver/Inc/stm32h5xx_hal_exti.h:
 ../Drivers/STM32H5xx_HAL_Driver/Inc/stm32h5xx_hal_fdcan.h:
 ../Middlewares/Third_Party/CMSIS/RTOS2/Include/cmsis_os2.h:
+../Core/Inc/CAN.h:

@@ -81,9 +81,9 @@ const osMessageQueueAttr_t canRxQueue_attributes = {
 	  .name = "canRxQueue"
 	};
 
-osMessageQueueId_t ContactorsQueueHandle;
+osMessageQueueId_t ContactorQueueHandle;
 const osMessageQueueAttr_t contactors_attributes = {
-	  .name = "contactorsQueue"
+	  .name = "contactorQueue"
 	};
 
 osMessageQueueId_t BatteryQueueHandle;
@@ -142,7 +142,7 @@ void MX_FREERTOS_Init(void) {
 			    &canRxQueue_attributes // attributes (or NULL)
 			);
 
-	ContactorsQueueHandle = osMessageQueueNew(
+	ContactorQueueHandle = osMessageQueueNew(
 				    8,                     // max number of messages
 				    sizeof(CANmsg),        // size of each message
 				    &contactors_attributes // attributes (or NULL)
@@ -162,8 +162,8 @@ void MX_FREERTOS_Init(void) {
 
   canTxTaskHandle = osThreadNew(CAN_Tx_Task, NULL, &canTxTask_attributes);
   canRxTaskHandle = osThreadNew(CAN_Rx_Task, NULL, &canRxTask_attributes);
-  ContactorsTaskHandle = osThreadNew(ContactorsTask, NULL, &Contactors_attributes);
-  BatteryTaskHandle = osThreadNew(BatteryTask, NULL, &Battery_attributes);
+  //ContactorsTaskHandle = osThreadNew(ContactorsTask, NULL, &Contactors_attributes);
+  //BatteryTaskHandle = osThreadNew(BatteryTask, NULL, &Battery_attributes);
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
