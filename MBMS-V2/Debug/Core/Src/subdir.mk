@@ -5,6 +5,7 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
+../Core/Src/CANMessageSender.c \
 ../Core/Src/app_freertos.c \
 ../Core/Src/can_rx.c \
 ../Core/Src/can_tx.c \
@@ -16,6 +17,7 @@ C_SRCS += \
 ../Core/Src/system_stm32h5xx.c 
 
 OBJS += \
+./Core/Src/CANMessageSender.o \
 ./Core/Src/app_freertos.o \
 ./Core/Src/can_rx.o \
 ./Core/Src/can_tx.o \
@@ -27,6 +29,7 @@ OBJS += \
 ./Core/Src/system_stm32h5xx.o 
 
 C_DEPS += \
+./Core/Src/CANMessageSender.d \
 ./Core/Src/app_freertos.d \
 ./Core/Src/can_rx.d \
 ./Core/Src/can_tx.d \
@@ -45,7 +48,7 @@ Core/Src/%.o Core/Src/%.su Core/Src/%.cyclo: ../Core/Src/%.c Core/Src/subdir.mk
 clean: clean-Core-2f-Src
 
 clean-Core-2f-Src:
-	-$(RM) ./Core/Src/app_freertos.cyclo ./Core/Src/app_freertos.d ./Core/Src/app_freertos.o ./Core/Src/app_freertos.su ./Core/Src/can_rx.cyclo ./Core/Src/can_rx.d ./Core/Src/can_rx.o ./Core/Src/can_rx.su ./Core/Src/can_tx.cyclo ./Core/Src/can_tx.d ./Core/Src/can_tx.o ./Core/Src/can_tx.su ./Core/Src/main.cyclo ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/main.su ./Core/Src/stm32h5xx_hal_msp.cyclo ./Core/Src/stm32h5xx_hal_msp.d ./Core/Src/stm32h5xx_hal_msp.o ./Core/Src/stm32h5xx_hal_msp.su ./Core/Src/stm32h5xx_it.cyclo ./Core/Src/stm32h5xx_it.d ./Core/Src/stm32h5xx_it.o ./Core/Src/stm32h5xx_it.su ./Core/Src/syscalls.cyclo ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/syscalls.su ./Core/Src/sysmem.cyclo ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/sysmem.su ./Core/Src/system_stm32h5xx.cyclo ./Core/Src/system_stm32h5xx.d ./Core/Src/system_stm32h5xx.o ./Core/Src/system_stm32h5xx.su
+	-$(RM) ./Core/Src/CANMessageSender.cyclo ./Core/Src/CANMessageSender.d ./Core/Src/CANMessageSender.o ./Core/Src/CANMessageSender.su ./Core/Src/app_freertos.cyclo ./Core/Src/app_freertos.d ./Core/Src/app_freertos.o ./Core/Src/app_freertos.su ./Core/Src/can_rx.cyclo ./Core/Src/can_rx.d ./Core/Src/can_rx.o ./Core/Src/can_rx.su ./Core/Src/can_tx.cyclo ./Core/Src/can_tx.d ./Core/Src/can_tx.o ./Core/Src/can_tx.su ./Core/Src/main.cyclo ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/main.su ./Core/Src/stm32h5xx_hal_msp.cyclo ./Core/Src/stm32h5xx_hal_msp.d ./Core/Src/stm32h5xx_hal_msp.o ./Core/Src/stm32h5xx_hal_msp.su ./Core/Src/stm32h5xx_it.cyclo ./Core/Src/stm32h5xx_it.d ./Core/Src/stm32h5xx_it.o ./Core/Src/stm32h5xx_it.su ./Core/Src/syscalls.cyclo ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/syscalls.su ./Core/Src/sysmem.cyclo ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/sysmem.su ./Core/Src/system_stm32h5xx.cyclo ./Core/Src/system_stm32h5xx.d ./Core/Src/system_stm32h5xx.o ./Core/Src/system_stm32h5xx.su
 
 .PHONY: clean-Core-2f-Src
 

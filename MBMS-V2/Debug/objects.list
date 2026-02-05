@@ -1,3 +1,4 @@
+"./Core/Src/CANMessageSender.o"
 "./Core/Src/app_freertos.o"
 "./Core/Src/can_rx.o"
 "./Core/Src/can_tx.o"
