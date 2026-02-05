@@ -104,7 +104,7 @@ void lastSentTime_init() {
 
 // complete/finish the below functions please ! (Please use good names for things !)
 
-send_MBMSHeartbeat() {
+void send_MBMSHeartbeat() {
 
 	// creating an instance of a CAN msg
 	CANmsg MBMSHeartbeatMsg;
@@ -118,23 +118,23 @@ send_MBMSHeartbeat() {
 
 }
 
-send_ContactorCommand() {
+void send_ContactorCommand() {
 
 }
 
-send_MBMSStatus() {
+void send_MBMSStatus() {
 
 }
 
-send_DCDCStack() {
+void send_DCDCStack() {
 
 }
 
-send_MBMSTrips() {
+void send_MBMSTrips() {
 
 }
 
-send_MBMSSoftTrips() {
+void send_MBMSSoftTrips() {
 
 }
 
