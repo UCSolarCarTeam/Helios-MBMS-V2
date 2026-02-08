@@ -19,9 +19,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "app_freertos.h"
-#include "can_tx.h"
-#include "can_rx.h"
-#include "CAN.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
