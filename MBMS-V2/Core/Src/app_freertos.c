@@ -22,6 +22,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "CAN.h"
+#include "can_rx.h"
+#include "can_tx.h"
 
 /* USER CODE END Includes */
 
