@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#define CAN_MAX_DATA_LEN 64u // full CAN FD payload size in bytes
+#define CAN_MAX_DATA_LEN 8u // full CAN FD payload size in bytes
 //ORION EXTENDED IDS
 #define BMU_HEARTBEAT 		0x300
 #define STARTUP_INFO 		0x301
@@ -17,6 +17,14 @@
 #define CONTACTOR_MASK		0x1fffffe0
 #define CONTACTOR_ID		0x210
 #define CONTACTOR_HEARTBEAT	0x200
+
+//some more defines idk what these do
+#define MBMS_HEARTBEAT_ID 0x100
+#define CONTACTOR_COMMAND_ID 0x101
+#define MBMS_STATUS_ID 0x102
+#define POWER_SELECTION_STATUS_ID 0x103
+#define MBMS_TRIP_ID 0x104
+#define MBMS_SOFT_BATTERY_LIMIT_WARNING_ID 0x105
 
 
 typedef struct {

@@ -1,3 +1,3 @@
 ../Core/Src/can_tx.c:9:6:CAN_Tx_Init	8	static
 ../Core/Src/can_tx.c:23:19:CAN_Tx_Send	56	static
-../Core/Src/can_tx.c:51:6:CAN_Tx_Task	96	static
+../Core/Src/can_tx.c:51:6:CAN_Tx_Task	40	static
