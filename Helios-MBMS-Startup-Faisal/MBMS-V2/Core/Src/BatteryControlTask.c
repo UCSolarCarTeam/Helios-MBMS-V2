@@ -20,6 +20,7 @@ uint32_t BCT_Counter = 0;
 //fttytfjyfjmyfjm
 //vhgmfdtydtyth
 
+// test
 
 void enter_BOOT() {
     /* 1. Set system state to BOOT */
