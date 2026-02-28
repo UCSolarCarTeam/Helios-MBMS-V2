@@ -17,7 +17,8 @@ uint32_t BCT_difference_tick = 0;
 uint32_t BCT_difference_seconds = 0;
 uint32_t BCT_Counter = 0;
 
-
+//fttytfjyfjmyfjm
+//vhgmfdtydtyth
 
 
 void enter_BOOT() {
