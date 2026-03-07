@@ -42,10 +42,10 @@ void Update_DCDCStackStruct();
 void Update_TripStruct();
 void Update_SoftTripStruct();
 
-void CheckContactorHeartbeats();
+void Check_ContactorHeartbeats();
 
 void SystemStateMachine();
-void UpdateContactors();
+void Control_Contactors();
 
 void UpdateCounter(uint32_t * counter);
 
