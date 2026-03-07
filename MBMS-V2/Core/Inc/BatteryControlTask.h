@@ -51,6 +51,7 @@ void clear_SoftTrips();
 // Update BCT Counter Function
 void UpdateCounter(uint32_t * counter);
 
+/* -------------------------------------- */
 
 
 
@@ -70,7 +71,7 @@ void Check_ContactorHeartbeats();
 void SystemStateMachine();
 void Control_Contactors();
 
-
+/* -------------------------------------- */
 
 
 
