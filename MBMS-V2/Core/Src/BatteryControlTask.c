@@ -9,6 +9,8 @@
 #include "MBMS.h"
 #include "main.h"
 
+#include <string.h>
+
 
 // test !!!
 
@@ -19,7 +21,7 @@ uint32_t BCT_difference_seconds = 0;
 uint32_t BCT_Counter = 0;
 
 
-Contactor_Info[5] contactorInfo = {0};
+Contactor_Info contactorInfo[NUM_OF_CNTR] = {0};
 MBMS_Status mbmsStatus;
 BatteryInfo batteryInfo;
 MBMS_Hard_Trips mbmsHardTrips;
@@ -106,7 +108,7 @@ void BatteryControlTask(void* arg)
 void BatteryControl() {
 
 	/* Updating structs */
-	Update_ContactorInfoStruct();
+	void UpdateContactorInfoStruct();
 	Update_DCDCStackStruct();
 	Update_BatteryInfoStruct();
 
@@ -124,7 +126,16 @@ void BatteryControl() {
 
 
 
+// Instead of a switch case. make a instance of a contatcor info struct.
+// Contatctor_Info LV_info;
+// Contatctor_Info Motor_info;
+// Contatctor_Info Array_info;
+// LV_info.charge_current = 6;
+// Motor_info.contactor_close = 1;
 
+//Remember structs are a data type with things inside of it so just make instances of it
+
+// Or use an array of contactor info
 void UpdateContactorInfoStruct()
 {
 
@@ -329,8 +340,29 @@ void clear_SoftTrips()
     memset(&mbmsSoftTrips, 0, sizeof(MBMS_Soft_Trips));
 }
 
-//hallo
 
+
+
+
+void Update_DCDCStackStruct(void)
+{
+    /* Stub: define later when DCDC stack struct logic is ready */
+}
+
+void Update_BatteryInfoStruct(void)
+{
+    /* Stub: define later when battery info update logic is ready */
+}
+
+void SystemStateMachine(void)
+{
+    /* Stub: define later when state machine logic is ready */
+}
+
+void UpdateContactors(void)
+{
+    /* Stub: define later when contactor actuation logic is ready */
+}
 
 
 

@@ -13,6 +13,8 @@
 #define CLOSE_CONTACTOR 1
 #define CLOSING_CONTACTOR 1
 
+#define NUM_OF_CNTR 4
+
 /* Enums */
 enum SecondaryContactor {
 	LV,
