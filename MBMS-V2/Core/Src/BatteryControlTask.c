@@ -11,6 +11,12 @@
 
 #include <string.h>
 
+#define HARD_MAX_CELL_VOLTAGE 4.20f //4.20V
+#define HARD_MIN_CELL_VOLTAGE 2.50f // 2.50V
+#define HARD_MAX_TEMP 60
+#define HARD_MIN_TEMP 0
+
+extern osMessageQueueId_t ContactorQueueHandle; // Used GPT for this
 
 // test !!!
 
@@ -30,6 +36,13 @@ MBMS_Soft_Trips mbmsSoftTrips;
 uint32_t startup_Check_Counter = 0;
 
 uint8_t carState = BOOT;
+
+
+
+
+
+
+
 
 
 void enter_BOOT() {
@@ -58,20 +71,12 @@ void enter_BOOT() {
 
 
 
-void MBMSStatus_init() {
-    /* Reset MBMS status to known-safe defaults */
+void MBMSStatus_init(void)
+{
     memset(&mbmsStatus, 0, sizeof(mbmsStatus));
-
-    /* If you track timestamps/heartbeats, set them to "never seen" */
-    mbmsStatus.lastHeartbeatTick = 0;
-
-    /* If you track fault flags, they’re already cleared by memset.
-       You can explicitly set any "expected" defaults here if needed. */
-
-    /* Example: ensure we're not claiming readiness in BOOT */
-    mbmsStatus.isReady = 0;
-
 }
+
+
 
 void perms_init() {
 	// TO DO
@@ -108,7 +113,7 @@ void BatteryControlTask(void* arg)
 void BatteryControl() {
 
 	/* Updating structs */
-	void UpdateContactorInfoStruct();
+	UpdateContactorInfoStruct();
 	Update_DCDCStackStruct();
 	Update_BatteryInfoStruct();
 
@@ -188,10 +193,6 @@ void UpdateContactorInfoStruct()
                         prechargerClosed, prechargerClosing, prechargerError,
                         contactorClosed,  contactorClosing,  contactorError,
                         lineCurrent, chargeCurrent, BPSerror);
-
-
-    int heartbeat = 3;
-    // update the list
 }
 
 
@@ -205,9 +206,6 @@ void UpdateContactorInfoStruct()
 
 /*-------------------------------------------*/
 /* Startup checks */
-
-// FASIAL PLEASE WORK ON THESE ONES !!!! :D
-
 void startupCheck()
 {
     /* Run startup gate checks in order. If any fail, enter fault. */
@@ -235,27 +233,23 @@ void startupCheck()
 
 uint8_t waitForFirstHeartbeats() {
 
-	CANmsg contactorMsg;
-
-	osStatus status = osMessageQueueGet(ContactorQueueHandle, &contactorMsg, NULL, 0);
-	if (status != osOK)
-	    {
-	        // No new message; just indicate "not dead yet" or keep waiting
-
-	        return 0;
-	    }
-	int message = "10101000000000000000000000000000000";
-
-	for (int i = 0; i < 3; i++){
-		board_list[i] // getting the contactor struct
-
-				   struct -> chargingState = dskfo
-
-	}
-
-
+//	CANmsg contactorMsg;
+//
+//	osStatus status = osMessageQueueGet(ContactorQueueHandle, &contactorMsg, NULL, 0);
+//	if (status != osOK)
+//	    {
+//	        // No new message; just indicate "not dead yet" or keep waiting
+//
+//	        return 0;
+//	    }
+//	int message = "10101000000000000000000000000000000";
+//
+//	for (int i = 0; i < 3; i++){
+////		board_list[i] // getting the contactor struct
+//	}
+//}
+    return 0;
 }
-
 
 
 
@@ -265,25 +259,25 @@ uint8_t startupBatteryCheck()
 
     if (batteryInfo.highCellVoltage > HARD_MAX_CELL_VOLTAGE)
     {
-    	mbmsHardTrips.High_volt_cell_trip = 1;
+        mbmsHardTrips.High_volt_cell_trip = 1;
         pass = 0;
     }
 
     if (batteryInfo.lowCellVoltage < HARD_MIN_CELL_VOLTAGE)
     {
-    	mbmsHardTrips.Low_volt_cell_trip = 1;
+        mbmsHardTrips.Low_volt_cell_trip = 1;
         pass = 0;
     }
 
     if (batteryInfo.highTemp > HARD_MAX_TEMP)
     {
-    	mbmsHardTrips.High_temp_trip = 1;
+        mbmsHardTrips.High_temp_trip = 1;
         pass = 0;
     }
 
     if (batteryInfo.lowTemp < HARD_MIN_TEMP)
     {
-    	mbmsHardTrips.Low_temp_trip = 1;
+        mbmsHardTrips.Low_temp_trip = 1;
         pass = 0;
     }
 
@@ -297,29 +291,27 @@ uint8_t startupBatteryCheck()
 
 uint8_t checkPrechargersOpen()
 {
-    for (int i = 1; i < 5; i++)
+    for (int i = 1; i < NUM_OF_CNTR; i++)
     {
         /* If the precharger is reported closed, then it is NOT open. */
-        if (contactorInfo[i].contactor_closed == CLOSE_CONTACTOR)
+        if (contactorInfo[i].precharge_close == CLOSE_CONTACTOR)
         {
             return 0;
         }
     }
-
     return 1;
 }
 
+
 uint8_t checkContactorsOpen()
 {
-
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < NUM_OF_CNTR; i++)
     {
-        if (contactorInfo[i].contactor_closed == CLOSE_CONTACTOR)
+        if (contactorInfo[i].contactor_close == CLOSE_CONTACTOR)
         {
             return 0;
         }
     }
-
     return 1;
 }
 

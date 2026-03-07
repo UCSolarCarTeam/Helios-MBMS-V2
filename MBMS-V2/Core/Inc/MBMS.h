@@ -16,12 +16,14 @@
 #define NUM_OF_CNTR 4
 
 /* Enums */
-enum SecondaryContactor {
-	LV,
-	MOTOR,
-	ARRAY,
-	CHARGE
-};
+typedef enum // match with the proper CAN ID's
+{
+    LV     = 0x100,
+    MOTOR  = 0x101,
+    ARRAY  = 0x102,
+    CHARGE = 0x103
+
+} ContactorCANID;
 
 
 enum carStates {
@@ -165,29 +167,6 @@ typedef struct {
 } Contactor_Info;
 
 
-
-
-
-// list [instnce]
-// list [
-//
-//Board_t* board_list[] = {
-//    &LV_board,
-//    &Motor_board,
-//    &Array_board,
-//    &Charge_board
-//};
-//
-//uint64_t* heartbeat_list[] = {
-//    LV_heartbeat,
-//    Motor_heartbeat,
-//    Array_heartbeat,
-//    Charge_heartbeat
-//};
-//
-//
-//const int board_list_len = (int)(sizeof(board_list) / sizeof(board_list[0]));
-//
 
 
 #endif /* INC_MBMS_H_ */
