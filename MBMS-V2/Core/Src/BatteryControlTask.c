@@ -1,6 +1,7 @@
 #include "BatteryControlTask.h"
 #include <stdint.h>
 #include "cmsis_os.h"
+#include "cmsis_os2.h"
 #include "CAN.h"
 //#include "StartupTask.h"
 //#include "ShutoffTask.h"
@@ -8,38 +9,29 @@
 //#include "CANMessageSenderTask.h"
 #include "MBMS.h"
 #include "main.h"
-
 #include <string.h>
 
-#define HARD_MAX_CELL_VOLTAGE 4.20f //4.20V
-#define HARD_MIN_CELL_VOLTAGE 2.50f // 2.50V
-#define HARD_MAX_TEMP 60
-#define HARD_MIN_TEMP 0
 
 extern osMessageQueueId_t ContactorQueueHandle; // Used GPT for this
-
-// test !!!
 
 uint32_t BCT_start_tick = 0;
 uint32_t BCT_end_tick = 0;
 uint32_t BCT_difference_tick = 0;
 uint32_t BCT_difference_seconds = 0;
 uint32_t BCT_Counter = 0;
-
+uint32_t startup_Check_Counter = 0;
+uint8_t carState = BOOT;
 
 Contactor_Info contactorInfo[NUM_OF_CNTR] = {0};
 MBMS_Status mbmsStatus;
 BatteryInfo batteryInfo;
 MBMS_Hard_Trips mbmsHardTrips;
 MBMS_Soft_Trips mbmsSoftTrips;
+Permissions mbmsPermissions;
 
-uint32_t startup_Check_Counter = 0;
-
-uint8_t carState = BOOT;
-
-
-
-
+uint32_t heartbeat_check_count = 0;
+uint16_t previousHeartbeats[NUM_OF_CNTR] = {0};
+heartbeatLastUpdatedTime[NUM_OF_CNTR] = {0};
 
 
 
@@ -71,21 +63,45 @@ void enter_BOOT() {
 
 
 
+
+
 void MBMSStatus_init(void)
 {
     memset(&mbmsStatus, 0, sizeof(mbmsStatus));
+    mbmsStatus.Abatt_enable = 1;
 }
 
 
 
-void perms_init() {
-	// TO DO
+
+void perms_init()
+{
+    // Reset all system permissions to safe defaults.
+    // This prevents the battery from charging or discharging
+    // until the startup checks are complete.
+
+    // TODO: set permission variables here
+	mbmsPermissions.lv = 0;
+	mbmsPermissions.motor = 0;
+	mbmsPermissions.array = 0;
+	mbmsPermissions.charge = 0;
 
 }
 
-void UpdateCounter(uint32_t * counter) {
 
+
+
+
+void update_Counter(uint32_t *counter)
+{
+    // Make sure the pointer is valid
+    if (counter != NULL)
+    {
+        // Increase the value of the counter by 1
+        (*counter)++;
+    }
 }
+
 
 
 
@@ -101,7 +117,6 @@ void BatteryControlTask(void* arg)
     	BCT_end_tick = osKernelGetTickCount();
     	BCT_difference_tick = BCT_end_tick - BCT_start_tick;
     	BCT_difference_seconds = taskTickLastStart;
-
 		taskTickLastStart += 10;
 		osDelayUntil(taskTickLastStart);
     }
@@ -110,94 +125,88 @@ void BatteryControlTask(void* arg)
 
 
 
+
 void BatteryControl() {
 
 	/* Updating structs */
-	UpdateContactorInfoStruct();
+	Update_ContactorInfoStruct();
 	Update_DCDCStackStruct();
 	Update_BatteryInfoStruct();
-
 
 	/* Tracking states */
 	SystemStateMachine();
 
 	/* Opening/closing contactors */
-	UpdateContactors();
+	Control_Contactors();
 
 	/* Updating BCT Counter */
-	UpdateCounter(&BCT_Counter);
+	update_Counter(&BCT_Counter);
 
 }
 
 
 
-// Instead of a switch case. make a instance of a contatcor info struct.
-// Contatctor_Info LV_info;
-// Contatctor_Info Motor_info;
-// Contatctor_Info Array_info;
-// LV_info.charge_current = 6;
-// Motor_info.contactor_close = 1;
 
-//Remember structs are a data type with things inside of it so just make instances of it
-
-// Or use an array of contactor info
-void UpdateContactorInfoStruct()
-{
-
+void Update_ContactorInfoStruct() {
 	CANmsg contactorMsg;
 
-    osStatus_t status = osMessageQueueGet(ContactorQueueHandle, &contactorMsg, NULL, 0);
-    if (status != osOK)
-    {
+    osStatus_t status = osMessageQueueGet(ContactorQueueHandle, &contactorMsg, NULL, 0); // Take from que and put into struct
+    if (status != osOK) {
         return; // no new message
-    }  // good
+    }
+    // defines are in CAN.h for mask and ID
+    uint32_t extID = contactorMsg.extendedID;
+
+    // if the msg is a contactor info msg
+    if ((extID & CNTR_MSG_MASK) == CONTACTOR_ID){
+    	uint8_t contactor_idx = extID - CONTACTOR_ID;
+
+    	uint8_t *data = contactorMsg.data;
+
+		uint8_t 	prechargerClosed   		= (data[0] >> 0) & 0x1;
+		uint8_t 	prechargerClosing  		= (data[0] >> 1) & 0x1;
+		uint8_t 	prechargerError    		= (data[0] >> 2) & 0x1;
+		uint8_t 	contactorClosed    		= (data[0] >> 3) & 0x1;
+		uint8_t 	contactorClosing   		= (data[0] >> 4) & 0x1;
+		uint8_t 	contactorError     		= (data[0] >> 5) & 0x1;
+		uint8_t 	contactorOpeningError 	= (data[0] >> 6) & 0x1;
+		int16_t 	lineCurrent 			= ((data[0] & 0x80) >> 7) | (data[1] << 1) | ((data[2] & 0x07) << 9); // extract bits 7 to 18
+		int16_t 	chargeCurrent 			= ((data[2] & 0xF8) >> 3) | ((data[3] & 0x7F) >> 6); // extract bits 19 to 30
+
+		contactorInfo[contactor_idx].precharge_close = prechargerClosed;
+		contactorInfo[contactor_idx].precharge_closing = prechargerClosing;
+		contactorInfo[contactor_idx].precharge_error = prechargerError;
+		contactorInfo[contactor_idx].contactor_close = contactorClosed;
+		contactorInfo[contactor_idx].contactor_closing = contactorClosing;
+		contactorInfo[contactor_idx].contactor_error = contactorError;
+		contactorInfo[contactor_idx].contactor_opening_error = contactorOpeningError;
+		contactorInfo[contactor_idx].line_current = lineCurrent;
+		contactorInfo[contactor_idx].charge_current = chargeCurrent;
 
 
-    int idx = -1;
+    }														// This is where we split the messages into heartbeat or board
+    // if the msg is a contactor heartbeat msg. We split them again into which heartbeat CCP it is
+    else {
+    	uint8_t contactor_idx = extID - CONTACTOR_HEARTBEAT; // get index (which contactor it is)
 
-    switch (contactorMsg.extendedID) // LV, Motor,  // or contactorMsg.id depending on your msg type
-    {
-        case LV:
-        	idx = 0; break;
-        case MOTOR:
-        	idx = 1; break;
-        case ARRAY:
-        	idx = 2; break;
-        case CHARGE:
-        	idx = 3; break;
+    	uint16_t new_heartbeat = contactorMsg.data[0] + (contactorMsg.data[1] << 8);
+    	contactorInfo[contactor_idx].heartbeat = new_heartbeat;
 
-        default: return; // not a contactor status message
+    	return;
+
     }
 
-
-
-    //Task 2: Decode payload (bit/byte shifting)
-
-    uint8_t *d = contactorMsg.data;
-
-
-    uint8_t prechargerClosed   = (d[0] >> 0) & 0x1;
-    uint8_t prechargerClosing  = (d[0] >> 1) & 0x1;
-    uint8_t prechargerError    = (d[0] >> 2) & 0x1;
-    uint8_t contactorClosed    = (d[0] >> 3) & 0x1;
-    uint8_t contactorClosing   = (d[0] >> 4) & 0x1;
-    uint8_t contactorError     = (d[0] >> 5) & 0x1;
-    uint8_t BPSerror           = (d[0] >> 6) & 0x1;
-//    int16_t lineCurrent  = (int16_t)( (int16_t)d[1] | ((int16_t)d[2] << 8) ); // might delete bit shifting if we change the data sheet to 16
-    int16_t lineCurrent  = (int16_t)( (int16_t)d[1] | ((int16_t)d[2]));
-//    int16_t chargeCurrent= (int16_t)( (int16_t)d[3] | ((int16_t)d[4] << 8) ); // might delete bit shifting if we change the data sheet to 16
-    int16_t chargeCurrent= (int16_t)( (int16_t)d[3] | ((int16_t)d[4]));
-
-
-    updateContactorInfo((uint8_t)idx,
-                        prechargerClosed, prechargerClosing, prechargerError,
-                        contactorClosed,  contactorClosing,  contactorError,
-                        lineCurrent, chargeCurrent, BPSerror);
-}
-
-
-
-
+//    void updateContactorInfo(uint8_t precharge_close,
+//    							uint8_t precharge_closing,
+//								uint8_t precharge_error,
+//								uint8_t contactor_close,
+//								uint8_t contactor_closing,
+//								uint8_t contactor_error,
+//								uint16_t line_current,
+//								uint16_t charge_current,
+//								uint8_t contactor_opening_error) {
+//
+//    }
 
 
 
@@ -206,24 +215,24 @@ void UpdateContactorInfoStruct()
 
 /*-------------------------------------------*/
 /* Startup checks */
-void startupCheck()
+void startupCheck() // change after this function is done: waitForFirstHeartbeats
 {
     /* Run startup gate checks in order. If any fail, enter fault. */
-    if (waitForFirstHeartbeats())
+    if (!waitForFirstHeartbeats())
     {
-        initiateBPSFault();   // preferred name from your header
+        enter_BPS_FAULT();   // preferred name from your header
         return;
     }
 
     if (!checkContactorsOpen() || !checkPrechargersOpen())
     {
-        initiateBPSFault();
+    	enter_BPS_FAULT();
         return;
     }
 
     if (!startupBatteryCheck())
     {
-        initiateBPSFault();
+    	enter_BPS_FAULT();
         return;
     }
 }
@@ -233,23 +242,64 @@ void startupCheck()
 
 uint8_t waitForFirstHeartbeats() {
 
-//	CANmsg contactorMsg;
-//
-//	osStatus status = osMessageQueueGet(ContactorQueueHandle, &contactorMsg, NULL, 0);
-//	if (status != osOK)
-//	    {
-//	        // No new message; just indicate "not dead yet" or keep waiting
-//
-//	        return 0;
-//	    }
-//	int message = "10101000000000000000000000000000000";
-//
-//	for (int i = 0; i < 3; i++){
-////		board_list[i] // getting the contactor struct
-//	}
-//}
+
+	static uint8_t heartbeatFailCounter[NUM_OF_CNTR] = {0};
+	uint8_t dead = 0;
+
+
+		for(int i = 0; i < NUM_OF_CNTR; i++) {
+			heartbeat_check_count++;
+			if (heartbeatFailCounter[i] > MAX_HEARTBEAT_FAILS){
+
+				switch (i) {
+					case 0:
+						mbmsHardTrips.LV_no_heartbeat_trip = 1;
+						break;
+					case 1:
+						mbmsHardTrips.MT_no_heartbeat_trip = 1;
+						break;
+					case 2:
+						mbmsHardTrips.AR_no_heartbeat_trip = 1;
+						break;
+					case 3:
+						mbmsHardTrips.CHG_no_heartbeat_trip = 1;
+						break;
+				}
+
+				dead = 1;
+				return dead;
+
+			}
+			previousHeartbeats[i] = 0;
+
+			if (previousHeartbeats[i] >= 65535) { // check this logic lol
+				previousHeartbeats[i] = 0;
+			}
+
+			if(previousHeartbeats[i] >= contactorInfo[i].heartbeat){
+				if(((osKernelGetTickCount() - heartbeatLastUpdatedTime[i])) > CONTACTOR_HEARTBEAT_TIMEOUT) { // where contactor_heartbeat_timeout is how often a heartbeat is sent out/recieved
+					heartbeatFailCounter[i]++;
+
+				}
+			}
+			else {
+				heartbeatLastUpdatedTime[i] = osKernelGetTickCount();
+				heartbeatFailCounter[i] = 0;
+			}
+				previousHeartbeats[i] = (contactorInfo[i].heartbeat);
+
+			}
+
+
+		}
+		return dead;
     return 0;
+
+
+
 }
+
+
 
 
 
@@ -291,7 +341,7 @@ uint8_t startupBatteryCheck()
 
 uint8_t checkPrechargersOpen()
 {
-    for (int i = 1; i < NUM_OF_CNTR; i++)
+    for (int i = 0; i < NUM_OF_CNTR; i++)
     {
         /* If the precharger is reported closed, then it is NOT open. */
         if (contactorInfo[i].precharge_close == CLOSE_CONTACTOR)
@@ -301,6 +351,9 @@ uint8_t checkPrechargersOpen()
     }
     return 1;
 }
+
+
+
 
 
 uint8_t checkContactorsOpen()
@@ -315,6 +368,10 @@ uint8_t checkContactorsOpen()
     return 1;
 }
 
+
+
+
+
 /*-------------------------------------------*/
 
 // Had to use AI for these bottom functions:
@@ -324,6 +381,9 @@ void clear_Trips()
     memset(&mbmsHardTrips, 0, sizeof(MBMS_Hard_Trips));
 
 }
+
+
+
 
 
 void clear_SoftTrips()
@@ -336,25 +396,43 @@ void clear_SoftTrips()
 
 
 
+
+
+
+
+
+
+
+
+
+// LATER TASKS //
 void Update_DCDCStackStruct(void)
 {
     /* Stub: define later when DCDC stack struct logic is ready */
 }
+
+
+
+
 
 void Update_BatteryInfoStruct(void)
 {
     /* Stub: define later when battery info update logic is ready */
 }
 
+
+
+
+
 void SystemStateMachine(void)
 {
     /* Stub: define later when state machine logic is ready */
 }
 
-void UpdateContactors(void)
-{
-    /* Stub: define later when contactor actuation logic is ready */
-}
+
+
+
+
 
 
 

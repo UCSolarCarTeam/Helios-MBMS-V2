@@ -15,8 +15,11 @@
 
 //Contactors
 #define CONTACTOR_MASK		0x1fffffe0
-#define CONTACTOR_ID		0x210
+#define CONTACTOR_ID		0x210 // 0X210 something would be boards
+
 #define CONTACTOR_HEARTBEAT	0x200
+#define CNTR_MSG_MASK 0xFFFFFFF0 //Mask we made
+
 
 //some more defines idk what these do
 #define MBMS_HEARTBEAT_ID 0x100

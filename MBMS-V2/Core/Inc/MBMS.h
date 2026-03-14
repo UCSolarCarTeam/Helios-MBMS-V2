@@ -14,16 +14,25 @@
 #define CLOSING_CONTACTOR 1
 
 #define NUM_OF_CNTR 4
+#define CONTACTOR_HEARTBEAT_TIMEOUT 100
+#define MAX_HEARTBEAT_FAILS 3
 
 /* Enums */
-typedef enum // match with the proper CAN ID's
-{
-    LV     = 0x100,
-    MOTOR  = 0x101,
-    ARRAY  = 0x102,
-    CHARGE = 0x103
+//typedef enum // match with the proper CAN ID's
+//{
+//    LV     = 0x100,
+//    MOTOR  = 0x101,
+//    ARRAY  = 0x102,
+//    CHARGE = 0x103
+//
+//} ContactorCANID;
 
-} ContactorCANID;
+enum Contactors{
+	LV = 0,
+	MOTOR,
+	ARRAY,
+	CHARGE
+};
 
 
 enum carStates {
@@ -153,8 +162,8 @@ typedef struct
 
 typedef struct {
 
-	uint64_t heartbeat;
-	uint8_t precharge_close;
+	uint16_t heartbeat;
+	uint8_t precharge_close; // pre-charge acts as a resistor to resist voltage spikes
 	uint8_t precharge_closing;
 	uint8_t precharge_error;
 	uint8_t contactor_close;
@@ -163,6 +172,7 @@ typedef struct {
 	uint8_t contactor_opening_error;
 	uint16_t line_current; // this is uint16 not Uint12, change CAN communication sheet!
 	uint16_t charge_current;
+	uint32_t heartbeat_check_count;
 
 } Contactor_Info;
 

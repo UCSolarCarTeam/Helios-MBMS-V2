@@ -9,6 +9,16 @@
 #define INC_BATTERYCONTROLTASK_H_
 
 #include <stdint.h>
+
+/* Battery Limit Defines */
+
+#define HARD_MAX_CELL_VOLTAGE 4.20f //4.20V
+#define HARD_MIN_CELL_VOLTAGE 2.50f // 2.50V
+#define HARD_MAX_TEMP 60
+#define HARD_MIN_TEMP 0
+
+
+
 void BatteryControlTask(void* arg);
 void BatteryControl();
 
@@ -50,7 +60,7 @@ void clear_Trips();
 void clear_SoftTrips();
 
 // Update BCT Counter Function
-void UpdateCounter(uint32_t * counter);
+void update_Counter(uint32_t * counter);
 
 /* -------------------------------------- */
 
