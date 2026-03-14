@@ -239,7 +239,7 @@ void startupCheck() // change after this function is done: waitForFirstHeartbeat
 
 
 
-
+// Add mutexs around shared variables
 uint8_t waitForFirstHeartbeats() {
 
 
@@ -249,7 +249,8 @@ uint8_t waitForFirstHeartbeats() {
 
 		for(int i = 0; i < NUM_OF_CNTR; i++) {
 			heartbeat_check_count++;
-			if (heartbeatFailCounter[i] > MAX_HEARTBEAT_FAILS){
+			// case that a ccp heartbeat has died
+			if (heartbeatFailCounter[i] > MAX_HEARTBEAT_FAILS) {
 
 				switch (i) {
 					case 0:
@@ -268,14 +269,14 @@ uint8_t waitForFirstHeartbeats() {
 
 				dead = 1;
 				return dead;
-
 			}
-			previousHeartbeats[i] = 0;
 
+			// case that the heartbeat has reached max value
 			if (previousHeartbeats[i] >= 65535) { // check this logic lol
 				previousHeartbeats[i] = 0;
 			}
 
+			// case that heartbeat update has timed out
 			if(previousHeartbeats[i] >= contactorInfo[i].heartbeat){
 				if(((osKernelGetTickCount() - heartbeatLastUpdatedTime[i])) > CONTACTOR_HEARTBEAT_TIMEOUT) { // where contactor_heartbeat_timeout is how often a heartbeat is sent out/recieved
 					heartbeatFailCounter[i]++;
@@ -285,17 +286,14 @@ uint8_t waitForFirstHeartbeats() {
 			else {
 				heartbeatLastUpdatedTime[i] = osKernelGetTickCount();
 				heartbeatFailCounter[i] = 0;
-			}
-				previousHeartbeats[i] = (contactorInfo[i].heartbeat);
-
+				previousHeartbeats[i] = (contactorInfo[i].heartbeat); // moved here from out of elae block - march 14
 			}
 
+			//previousHeartbeats[i] = (contactorInfo[i].heartbeat);
 
 		}
-		return dead;
-    return 0;
 
-
+	return dead;
 
 }
 
