@@ -442,7 +442,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(DCDC1_EN_GPIO_Port, DCDC1_EN_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(Strobe_EN_GPIO_Port, Strobe_EN_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, _12V_CAN_PCHG_Pin|Strobe_EN_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, _14V_Charge_EN_Pin|Abatt_EN_Pin, GPIO_PIN_RESET);
@@ -450,10 +450,10 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(_12V_CAN_GPIO_Port, _12V_CAN_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : MPS_Pin ESD_Pin _12V_Critical_Fault_Pin _12V_Charger_Fault_Pin
-                           _12V_Critical_OC_Pin _12V_Critical_Pin */
-  GPIO_InitStruct.Pin = MPS_Pin|ESD_Pin|_12V_Critical_Fault_Pin|_12V_Charger_Fault_Pin
-                          |_12V_Critical_OC_Pin|_12V_Critical_Pin;
+  /*Configure GPIO pins : MPS_Pin ESD_Pin nDCDC_Fault_Pin _14V_Charger_Fault_Pin
+                           _12V_Critical_UC_Pin _12V_Critical_Pin */
+  GPIO_InitStruct.Pin = MPS_Pin|ESD_Pin|nDCDC_Fault_Pin|_14V_Charger_Fault_Pin
+                          |_12V_Critical_UC_Pin|_12V_Critical_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
@@ -471,12 +471,18 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(DCDC1_EN_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : Strobe_EN_Pin */
-  GPIO_InitStruct.Pin = Strobe_EN_Pin;
+  /*Configure GPIO pin : _12V_CAN_State_Pin */
+  GPIO_InitStruct.Pin = _12V_CAN_State_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(_12V_CAN_State_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : _12V_CAN_PCHG_Pin Strobe_EN_Pin */
+  GPIO_InitStruct.Pin = _12V_CAN_PCHG_Pin|Strobe_EN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(Strobe_EN_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : _14V_Charge_EN_Pin Abatt_EN_Pin */
   GPIO_InitStruct.Pin = _14V_Charge_EN_Pin|Abatt_EN_Pin;
