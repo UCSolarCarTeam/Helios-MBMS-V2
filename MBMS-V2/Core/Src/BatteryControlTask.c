@@ -33,11 +33,19 @@ uint32_t heartbeat_check_count = 0;
 uint16_t previousHeartbeats[NUM_OF_CNTR] = {0};
 heartbeatLastUpdatedTime[NUM_OF_CNTR] = {0};
 
-
+uint8_t arr[4];
+arr[MOTOR] = 1;
 
 
 
 void enter_BOOT() {
+
+	Contactor_Info motorInfo;
+	motorInfo.charge_current = 16;
+	motorInfo.
+
+
+
     /* 1. Set system state to BOOT */
     carState = BOOT;
 
@@ -239,7 +247,7 @@ void startupCheck() // change after this function is done: waitForFirstHeartbeat
 
 
 
-// Add mutexs around shared variables
+
 uint8_t waitForFirstHeartbeats() {
 
 
@@ -249,8 +257,7 @@ uint8_t waitForFirstHeartbeats() {
 
 		for(int i = 0; i < NUM_OF_CNTR; i++) {
 			heartbeat_check_count++;
-			// case that a ccp heartbeat has died
-			if (heartbeatFailCounter[i] > MAX_HEARTBEAT_FAILS) {
+			if (heartbeatFailCounter[i] > MAX_HEARTBEAT_FAILS){
 
 				switch (i) {
 					case 0:
@@ -269,14 +276,14 @@ uint8_t waitForFirstHeartbeats() {
 
 				dead = 1;
 				return dead;
-			}
 
-			// case that the heartbeat has reached max value
+			}
+			previousHeartbeats[i] = 0;
+
 			if (previousHeartbeats[i] >= 65535) { // check this logic lol
 				previousHeartbeats[i] = 0;
 			}
 
-			// case that heartbeat update has timed out
 			if(previousHeartbeats[i] >= contactorInfo[i].heartbeat){
 				if(((osKernelGetTickCount() - heartbeatLastUpdatedTime[i])) > CONTACTOR_HEARTBEAT_TIMEOUT) { // where contactor_heartbeat_timeout is how often a heartbeat is sent out/recieved
 					heartbeatFailCounter[i]++;
@@ -286,14 +293,17 @@ uint8_t waitForFirstHeartbeats() {
 			else {
 				heartbeatLastUpdatedTime[i] = osKernelGetTickCount();
 				heartbeatFailCounter[i] = 0;
-				previousHeartbeats[i] = (contactorInfo[i].heartbeat); // moved here from out of elae block - march 14
+			}
+				previousHeartbeats[i] = (contactorInfo[i].heartbeat);
+
 			}
 
-			//previousHeartbeats[i] = (contactorInfo[i].heartbeat);
 
 		}
+		return dead;
+    return 0;
 
-	return dead;
+
 
 }
 
@@ -428,8 +438,25 @@ void SystemStateMachine(void)
 }
 
 
+void Control_Contactors(){
+	uint8_t contactorClosing = false;
 
+	//check if any of the contactors are closed
 
+	for (int i = 0; i <5; i++){
+		if (contactorInfo[i].updateContactors == CLOSING_CONTACTOR){
+			contactorClosing = true;
+			break;
+		}
+	}
+	//if no contactors are in the process of closing and the battery is nor in fault tpe state (MPS,BPS)
+	if (!contactorClosing && !mbmsPermission.faulted){
+		if((mbmsPermission.lv) && (contactorInfo[LV].contactor_close != CLOSING_CONTACTOR) && (mbmsStatus.discharge_enable == 0)){
+			Contactor_CMND_t.low_voltage = CLOSING_CONTACTOR;
+
+		}
+	}
+}
 
 
 
