@@ -465,6 +465,7 @@ void Control_Contactors(){
 	}
 }
 
+
 	if (!mbmsPermissions.lv){
 		Contactor_CMND_t.low_voltage = OPEN_CONTACTOR;
 	}
