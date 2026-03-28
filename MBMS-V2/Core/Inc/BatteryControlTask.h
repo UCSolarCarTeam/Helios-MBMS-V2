@@ -75,6 +75,7 @@ void Update_DCDCStackStruct();
 void Update_TripStruct();
 void Update_SoftTripStruct();
 
+
 // Checking CCPS Alive Function
 void Check_ContactorHeartbeats();
 

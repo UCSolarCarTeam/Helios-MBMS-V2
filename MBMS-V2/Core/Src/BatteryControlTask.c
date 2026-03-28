@@ -194,10 +194,10 @@ void Update_ContactorInfoStruct() {
 
     	uint16_t new_heartbeat = contactorMsg.data[0] + (contactorMsg.data[1] << 8);
     	contactorInfo[contactor_idx].heartbeat = new_heartbeat;
-
-    	return;
-
     }
+
+    return;
+}
 
 //    void updateContactorInfo(uint8_t precharge_close,
 //    							uint8_t precharge_closing,
@@ -243,64 +243,64 @@ void startupCheck() // change after this function is done: waitForFirstHeartbeat
 
 
 
-uint8_t waitForFirstHeartbeats() {
-
-
-	static uint8_t heartbeatFailCounter[NUM_OF_CNTR] = {0};
-	uint8_t dead = 0;
-
-
-		for(int i = 0; i < NUM_OF_CNTR; i++) {
-			heartbeat_check_count++;
-			if (heartbeatFailCounter[i] > MAX_HEARTBEAT_FAILS){
-
-				switch (i) {
-					case 0:
-						mbmsHardTrips.LV_no_heartbeat_trip = 1;
-						break;
-					case 1:
-						mbmsHardTrips.MT_no_heartbeat_trip = 1;
-						break;
-					case 2:
-						mbmsHardTrips.AR_no_heartbeat_trip = 1;
-						break;
-					case 3:
-						mbmsHardTrips.CHG_no_heartbeat_trip = 1;
-						break;
-				}
-
-				dead = 1;
-				return dead;
-
-			}
-			previousHeartbeats[i] = 0;
-
-			if (previousHeartbeats[i] >= 65535) { // check this logic lol
-				previousHeartbeats[i] = 0;
-			}
-
-			if(previousHeartbeats[i] >= contactorInfo[i].heartbeat){
-				if(((osKernelGetTickCount() - heartbeatLastUpdatedTime[i])) > CONTACTOR_HEARTBEAT_TIMEOUT) { // where contactor_heartbeat_timeout is how often a heartbeat is sent out/recieved
-					heartbeatFailCounter[i]++;
-
-				}
-			}
-			else {
-				heartbeatLastUpdatedTime[i] = osKernelGetTickCount();
-				heartbeatFailCounter[i] = 0;
-			}
-				previousHeartbeats[i] = (contactorInfo[i].heartbeat);
-
-			}
-
-
-		}
-		return dead;
-    return 0;
-
-
-
-}
+//uint8_t waitForFirstHeartbeats() {
+//
+//
+//	static uint8_t heartbeatFailCounter[NUM_OF_CNTR] = {0};
+//	uint8_t dead = 0;
+//
+//
+//		for(int i = 0; i < NUM_OF_CNTR; i++) {
+//			heartbeat_check_count++;
+//			if (heartbeatFailCounter[i] > MAX_HEARTBEAT_FAILS){
+//
+//				switch (i) {
+//					case 0:
+//						mbmsHardTrips.LV_no_heartbeat_trip = 1;
+//						break;
+//					case 1:
+//						mbmsHardTrips.MT_no_heartbeat_trip = 1;
+//						break;
+//					case 2:
+//						mbmsHardTrips.AR_no_heartbeat_trip = 1;
+//						break;
+//					case 3:
+//						mbmsHardTrips.CHG_no_heartbeat_trip = 1;
+//						break;
+//				}
+//
+//				dead = 1;
+//				return dead;
+//
+//			}
+//			previousHeartbeats[i] = 0;
+//
+//			if (previousHeartbeats[i] >= 65535) { // check this logic lol
+//				previousHeartbeats[i] = 0;
+//			}
+//
+//			if(previousHeartbeats[i] >= contactorInfo[i].heartbeat){
+//				if(((osKernelGetTickCount() - heartbeatLastUpdatedTime[i])) > CONTACTOR_HEARTBEAT_TIMEOUT) { // where contactor_heartbeat_timeout is how often a heartbeat is sent out/recieved
+//					heartbeatFailCounter[i]++;
+//
+//				}
+//			}
+//			else {
+//				heartbeatLastUpdatedTime[i] = osKernelGetTickCount();
+//				heartbeatFailCounter[i] = 0;
+//			}
+//				previousHeartbeats[i] = (contactorInfo[i].heartbeat);
+//
+//			}
+//
+//
+//		}
+//		return dead;
+//    return 0;
+//
+//
+//
+//}
 
 
 
@@ -433,12 +433,14 @@ void SystemStateMachine(void)
 }
 
 
-void Control_Contactors(){
+void Control_Contactors()
+{
+
 	uint8_t contactorClosing = false;
 
 	//check if any of the contactors are closed
 
-	for (int i = 0; i <5; i++){
+	for (int i = 0; i < NUM_OF_CNTR; i++){
 		if (contactorInfo[i].contactor_closing == CLOSING_CONTACTOR){
 			contactorClosing = true;
 			break;
@@ -449,16 +451,16 @@ void Control_Contactors(){
 		if((mbmsPermissions.lv) && (contactorInfo[LV].contactor_close != CLOSE_CONTACTOR) && (mbmsStatus.discharge_enable == 0)){
 			contactorcmd.low_voltage = CLOSE_CONTACTOR;
 		}
-	else if ((mbmsPermissions.motor) && (contactorInfo[MOTOR].contactor_close != CLOSE_CONTACTOR ) && (mbmsStatus.discharge_enable == 0)){
-			contactorcmd.motor = CLOSE_CONTACTOR;
+		else if ((mbmsPermissions.motor) && (contactorInfo[MOTOR].contactor_close != CLOSE_CONTACTOR ) && (mbmsStatus.discharge_enable == 0)){
+				contactorcmd.motor = CLOSE_CONTACTOR;
+		}
+		else if ((mbmsPermissions.array) && (contactorInfo[ARRAY].contactor_close != CLOSE_CONTACTOR) && (mbmsStatus.charge_enable == 0)){
+				contactorcmd.array = CLOSE_CONTACTOR;
+		}
+		else if ((mbmsPermissions.charge) && (contactorInfo[CHARGE].contactor_close != CLOSE_CONTACTOR) && (mbmsStatus.charge_enable == 0)){
+				contactorcmd.charge = CLOSE_CONTACTOR;
+		}
 	}
-	else if ((mbmsPermissions.array) && (contactorInfo[ARRAY].contactor_close != CLOSE_CONTACTOR) && (mbmsStatus.charge_enable == 0)){
-			contactorcmd.array = CLOSE_CONTACTOR;
-	}
-	else if ((mbmsPermissions.charge) && (contactorInfo[CHARGE].contactor_close != CLOSE_CONTACTOR) && (mbmsStatus.charge_enable == 0)){
-			contactorcmd.charge = CLOSE_CONTACTOR;
-	}
-}
 
 
 	if (!mbmsPermissions.lv){
@@ -466,22 +468,28 @@ void Control_Contactors(){
 	}
 
 	if (!mbmsPermissions.motor){
-			contactorcmd.motor = OPEN_CONTACTOR;
-		}
+		contactorcmd.motor = OPEN_CONTACTOR;
+	}
 
 	if (!mbmsPermissions.array){
-			contactorcmd.array = OPEN_CONTACTOR;
-		}
+		contactorcmd.array = OPEN_CONTACTOR;
+	}
 
 	if (!mbmsPermissions.charge){
-			contactorcmd.charge = OPEN_CONTACTOR;
-		}
-
+		contactorcmd.charge = OPEN_CONTACTOR;
+	}
 }
 
 
 
 
+
+
+
+//void Update_TripStruct(){
+//	static uint8_t BPS_Fault = 0;
+//	osStatus_t acquire = osMutexAcquire()
+//}
 
 
 
