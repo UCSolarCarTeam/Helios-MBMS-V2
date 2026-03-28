@@ -446,17 +446,17 @@ void Control_Contactors(){
 	}
 	//if no contactors are in the process of closing and the battery is nor in fault tpe state (MPS,BPS)
 	if (!contactorClosing && !mbmsPermissions.faulted){
-		if((mbmsPermissions.lv) && (contactorInfo[LV].contactor_close != CLOSING_CONTACTOR) && (mbmsStatus.discharge_enable == 0)){
-			contactorcmd.low_voltage = CLOSING_CONTACTOR;
+		if((mbmsPermissions.lv) && (contactorInfo[LV].contactor_close != CLOSE_CONTACTOR) && (mbmsStatus.discharge_enable == 0)){
+			contactorcmd.low_voltage = CLOSE_CONTACTOR;
 		}
-	else if ((mbmsPermissions.motor) && (contactorInfo[MOTOR].contactor_close != CLOSING_CONTACTOR ) && (mbmsStatus.discharge_enable == 0)){
-			contactorcmd.motor = CLOSING_CONTACTOR;
+	else if ((mbmsPermissions.motor) && (contactorInfo[MOTOR].contactor_close != CLOSE_CONTACTOR ) && (mbmsStatus.discharge_enable == 0)){
+			contactorcmd.motor = CLOSE_CONTACTOR;
 	}
-	else if ((mbmsPermissions.array) && (contactorInfo[ARRAY].contactor_close != CLOSING_CONTACTOR) && (mbmsStatus.charge_enable == 0)){
-			contactorcmd.array = CLOSING_CONTACTOR;
+	else if ((mbmsPermissions.array) && (contactorInfo[ARRAY].contactor_close != CLOSE_CONTACTOR) && (mbmsStatus.charge_enable == 0)){
+			contactorcmd.array = CLOSE_CONTACTOR;
 	}
-	else if ((mbmsPermissions.charge) && (contactorInfo[CHARGE].contactor_close != CLOSING_CONTACTOR) && (mbmsStatus.charge_enable == 0)){
-			contactorcmd.charge = CLOSING_CONTACTOR;
+	else if ((mbmsPermissions.charge) && (contactorInfo[CHARGE].contactor_close != CLOSE_CONTACTOR) && (mbmsStatus.charge_enable == 0)){
+			contactorcmd.charge = CLOSE_CONTACTOR;
 	}
 }
 
