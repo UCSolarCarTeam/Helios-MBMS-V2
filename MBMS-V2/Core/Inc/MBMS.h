@@ -17,6 +17,13 @@
 #define CONTACTOR_HEARTBEAT_TIMEOUT 1500 // milliseconds
 #define MAX_HEARTBEAT_FAILS 3
 
+#define DCDC1_en()							 HAL_GPIO_ReadPin(DCDC1_EN_GPIO_Port, DCDC1_EN_Pin);
+#define	MBMS_charge_12V_enable()			 HAL_GPIO_ReadPin(Charge_Enable_GPIO_Port, Charge_Enable_Pin);
+#define	DCDC1_fault()	    			 	 HAL_GPIO_ReadPin(DCDC1_Fault_GPIO_Port, DCDC1_Fault_Pin);
+#define	critical_fault() 				   	 HAL_GPIO_ReadPin(_12V_Critical_Fault_GPIO_Port,_12V_Critical_Fault_Pin );
+#define	charger_fault() 					 HAL_GPIO_ReadPin(_12V_Charger_Fault_GPIO_Port, _12V_Charger_Fault_Pin);
+#define	critical_OC() 						 HAL_GPIO_ReadPin(_12V_Critical_OC_GPIO_Port, _12V_Critical_OC_Pin);
+
 /* Enums */
 //typedef enum // match with the proper CAN ID's
 //{

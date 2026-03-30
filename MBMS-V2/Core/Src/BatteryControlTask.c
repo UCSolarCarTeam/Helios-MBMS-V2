@@ -28,6 +28,8 @@ BatteryInfo batteryInfo;
 MBMS_Hard_Trips mbmsHardTrips;
 MBMS_Soft_Trips mbmsSoftTrips;
 Permissions mbmsPermissions;
+DCDC_Stack dcdc_stack;
+
 
 uint32_t heartbeat_check_count = 0;
 uint16_t previousHeartbeats[NUM_OF_CNTR] = {0};
@@ -251,18 +253,18 @@ uint8_t waitForFirstHeartbeats() {
 			heartbeat_check_count++;
 			// case that a ccp heartbeat has died
 			if (heartbeatFailCounter[i] > MAX_HEARTBEAT_FAILS) {
-
+				// from enum
 				switch (i) {
-					case 0:
+					case LV:
 						mbmsHardTrips.LV_no_heartbeat_trip = 1;
 						break;
-					case 1:
+					case MOTOR:
 						mbmsHardTrips.MT_no_heartbeat_trip = 1;
 						break;
-					case 2:
+					case ARRAY:
 						mbmsHardTrips.AR_no_heartbeat_trip = 1;
 						break;
-					case 3:
+					case CHARGE:
 						mbmsHardTrips.CHG_no_heartbeat_trip = 1;
 						break;
 				}
@@ -277,12 +279,16 @@ uint8_t waitForFirstHeartbeats() {
 			}
 
 			// case that heartbeat update has timed out
+			// This checks whether the heartbeat did not increase.
 			if(previousHeartbeats[i] >= contactorInfo[i].heartbeat){
+				// If the heartbeat hasn't changed for too long, the system assumes it may have stalled.
 				if(((osKernelGetTickCount() - heartbeatLastUpdatedTime[i])) > CONTACTOR_HEARTBEAT_TIMEOUT) { // where contactor_heartbeat_timeout is how often a heartbeat is sent out/recieved
+					// The failure counter increases.
 					heartbeatFailCounter[i]++;
 
 				}
 			}
+			// If the heartbeat did increase, the controller is alive. (Updates the last heartbeat time, Resets the failure counter, Stores the new heartbeat value)
 			else {
 				heartbeatLastUpdatedTime[i] = osKernelGetTickCount();
 				heartbeatFailCounter[i] = 0;
@@ -404,8 +410,15 @@ void clear_SoftTrips()
 
 
 // LATER TASKS //
-void Update_DCDCStackStruct(void)
+void Update_DCDCStackStruct(void) //update power selection struct
 {
+	dcdc_stack.DCDC1_en = DCDC1_en();
+	dcdc_stack.MBMS_charge_12V_enable = MBMS_charge_12V_enable();
+	dcdc_stack.DCDC1_fault = DCDC1_fault();
+	dcdc_stack.critical_fault = critical_fault();
+	dcdc_stack.charger_fault = charger_fault();
+	dcdc_stack.critical_OC = critical_OC();
+
     /* Stub: define later when DCDC stack struct logic is ready */
 }
 
@@ -413,7 +426,7 @@ void Update_DCDCStackStruct(void)
 
 
 
-void Update_BatteryInfoStruct(void)
+void Update_BatteryInfoStruct(void) //updating orion info struct
 {
     /* Stub: define later when battery info update logic is ready */
 }
@@ -425,6 +438,7 @@ void Update_BatteryInfoStruct(void)
 void SystemStateMachine(void)
 {
     /* Stub: define later when state machine logic is ready */
+}
 }
 
 
