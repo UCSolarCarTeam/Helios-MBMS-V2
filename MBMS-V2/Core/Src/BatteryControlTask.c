@@ -412,6 +412,8 @@ void clear_SoftTrips()
 // LATER TASKS //
 void Update_DCDCStackStruct(void) //update power selection struct
 {
+	// HELLO TEST TEST
+
 	dcdc_stack.DCDC1_en = DCDC1_en();
 	dcdc_stack.MBMS_charge_12V_enable = MBMS_charge_12V_enable();
 	dcdc_stack.DCDC1_fault = DCDC1_fault();
