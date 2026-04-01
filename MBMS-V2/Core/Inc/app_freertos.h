@@ -56,6 +56,10 @@ extern "C" {
 /* USER CODE END EM */
 extern osThreadId_t defaultTaskHandle;
 
+extern osMutexId_t MBMSTripMutexHandle;
+extern osMutexId_t BatteryInfoMutexHandle;
+extern osMutexId_t ContactorInfoMutexHandle;
+
 /* Exported function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
 

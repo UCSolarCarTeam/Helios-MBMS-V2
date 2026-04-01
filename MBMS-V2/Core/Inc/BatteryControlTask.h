@@ -17,7 +17,12 @@
 #define HARD_MAX_TEMP 60
 #define HARD_MIN_TEMP 0
 
-
+/* Current? */
+#define HARD_MAX_COMMON_CONTACTOR_CURRENT 	300
+#define HARD_MAX_MOTORS_CONTACTOR_CURRENT 	300
+#define HARD_MAX_ARRAY_CONTACTOR_CURRENT 	300
+#define HARD_MAX_LV_CONTACTOR_CURRENT 		300
+#define HARD_MAX_CHARGE_CONTACTOR_CURRENT  	300
 
 void BatteryControlTask(void* arg);
 void BatteryControl();

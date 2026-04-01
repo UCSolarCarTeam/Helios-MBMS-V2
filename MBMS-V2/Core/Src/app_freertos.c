@@ -26,6 +26,8 @@
 #include "can_rx.h"
 #include "can_tx.h"
 
+
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -88,18 +90,43 @@ const osMessageQueueAttr_t contactors_attributes = {
 	};
 
 osMessageQueueId_t BatteryQueueHandle;
+
+
 const osMessageQueueAttr_t battery_attributes = {
 	  .name = "batteryQueue"
 	};
 
+//Mutex Handles
+osMutexId_t MBMSTripMutexHandle;
+const osMutexAttr_t MBMSTripMutex_attributes = {
+		.name = "MBMSTripMutex",
+		.attr_bits = osMutexPrioInherit,
+};
+
+osMutexId_t ContactorInfoMutexHandle;
+const osMutexAttr_t ContactorInfoMutex_attributes = {
+  .name = "ContactorInfoMutex",
+  .attr_bits = osMutexPrioInherit,
+};
+
+osMutexId_t BatteryInfoMutexHandle;
+const osMutexAttr_t MBMSTripMutex_attributes = {
+		.name = "BatteryInfoMutex",
+		.attr_bits = osMutexPrioInherit,
+};
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
+
+
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
   .priority = (osPriority_t) osPriorityNormal,
   .stack_size = 128 * 4
 };
+
+
+
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -117,7 +144,10 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END Init */
 
   /* USER CODE BEGIN RTOS_MUTEX */
-//os MutexId_t
+
+	MBMSTripMutexHandle = osMutexNew(&MBMSTripMutex_attributes);
+	ContactorInfoMutexHandle = osMutexNew(&ContactorInfoMutex_attributes);
+
   /* USER CODE END RTOS_MUTEX */
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
@@ -129,7 +159,6 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
-
 
 	canTxQueueHandle = osMessageQueueNew(
 	    8,                     // max number of messages

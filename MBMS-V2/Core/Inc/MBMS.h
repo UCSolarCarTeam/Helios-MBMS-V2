@@ -8,6 +8,9 @@
 #ifndef INC_MBMS_H_
 #define INC_MBMS_H_
 
+#define UPDATING_MUTEX_TIMEOUT 5
+#define READING_MUTEX_TIMEOUT 5
+
 /* Defines */
 #define OPEN_CONTACTOR 0
 #define CLOSE_CONTACTOR 1

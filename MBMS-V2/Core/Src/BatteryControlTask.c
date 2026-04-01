@@ -486,10 +486,87 @@ void Control_Contactors()
 
 
 
-//void Update_TripStruct(){
-//	static uint8_t BPS_Fault = 0;
-//	osStatus_t acquire = osMutexAcquire()
-//}
+void Update_TripStruct()
+{
+	static uint8_t BPS_Fault = 0;
+	osStatus_t acquire = osMutexAcquire(MBMSTripMutexHandle,UPDATING_MUTEX_TIMEOUT);
+	if(aquire1 == osOK)
+	{
+		osStatus_t a1 = osMutexAcquire(ContactorInfoMutexHandle,UPDATING_MUTEX_TIMEOUT )
+		if(a1 == osOK)
+		{
+			if(batteryInfo.packCurrent > HARD_MAX_COMMON_CONTACTOR_CURRENT )
+			{
+				mbmsHardTrips.CMN_high_cur_trip =1;
+				BPS_Fault =1;
+			}
+
+			if(contactorInfo[MOTOR].line_current > HARD_MAX_MOTORS_CONTACTOR_CURRENT)
+			{
+				MBMS_Hard_Trips.MT_high_cur_trip = 1;
+			}
+
+			if(contactorInfo[ARRAY].line_current > HARD_MAX_ARRAY_CONTACTOR_CURRENT)
+			{
+				MBMS_Hard_Trips.AR_high_cur_trip = 1;
+			}
+
+			if(contactorInfo[LV].line_current > HARD_MAX_LV_CONTACTOR_CURRENT)
+			{
+				MBMS_Hard_Trips.LV_high_cur_trip = 1;
+			}
+
+			if(contactorInfo[CHARGE].line_current > HARD_MAX_CHARGE_CONTACTOR_CURRENT)
+			{
+				MBMS_Hard_Trips.CHG_high_cur_trip = 1;
+			}
+
+			if(contactorInfo[CHARGE].line_current > 0 || contactorInfo[LV].line_current <0)
+			{
+				MBMS_Hard_Trips.Resverse_cur_trip = 1;
+				BPS_Fault =1;
+			}
+
+			osMutexRelease(ContactorInfoMutexHandle);
+		}
+
+
+
+
+
+	osStatus_t a2 = osMutexAcquire(BatteryInfoMutexHandle,READING_MUTEX_TIMEOUT);
+	if(aquire2 == osOK)
+	{
+		if(batteryInfo.highCellVoltage > HARD_MAX_CELL_VOLTAGE)
+		{
+			MBMS_Hard_Trips.High_volt_cell_trip = 1;
+			BPS_Fault =1;
+		}
+
+		if(batteryInfo.lowCellVoltage < HARD_MIN_CELL_VOLTAGE)
+		{
+			MBMS_Hard_Trips.Low_volt_cell_trip = 1;
+			BPS_Fault =1;
+		}
+
+		if(batteryInfo.highTemp > HARD_MAX_TEMP)
+		{
+			MBMS_Hard_Trips.High_temp_trip = 1;
+			BPS_Fault =1;
+		}
+
+		if(batteryInfo.lowTemp < HARD_MIN_TEMP)
+		{
+			MBMS_Hard_Trips.Low_temp_trip = 1;
+			BPS_Fault =1;
+		}
+
+		osMutexRelease(BatteryInfoMutexHandle);
+	}
+
+
+}
+}
 
 
 
