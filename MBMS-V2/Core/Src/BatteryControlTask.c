@@ -490,7 +490,7 @@ void Update_TripStruct()
 {
 	static uint8_t BPS_Fault = 0;
 	osStatus_t acquire = osMutexAcquire(MBMSTripMutexHandle,UPDATING_MUTEX_TIMEOUT);
-	if(aquire1 == osOK)
+	if(aquire == osOK)
 	{
 		osStatus_t a1 = osMutexAcquire(ContactorInfoMutexHandle,UPDATING_MUTEX_TIMEOUT )
 		if(a1 == osOK)
@@ -535,7 +535,7 @@ void Update_TripStruct()
 
 
 	osStatus_t a2 = osMutexAcquire(BatteryInfoMutexHandle,READING_MUTEX_TIMEOUT);
-	if(aquire2 == osOK)
+	if(a2 == osOK)
 	{
 		if(batteryInfo.highCellVoltage > HARD_MAX_CELL_VOLTAGE)
 		{
@@ -564,8 +564,25 @@ void Update_TripStruct()
 		osMutexRelease(BatteryInfoMutexHandle);
 	}
 
+	osStatus_t a3 = osMutexAcquire(MBMSStatusMutexHandle,READING_MUTEX_TIMEOUT);
+	if (a3 == osOK)
+		{
+			//if orion CAN msg wasnt received recently, trip set
+			if(!(mbmsStatus.OBMS_CAN_RR))
+			{
+				MBMS_Hard_Trips.OBMS_msg_timeout_trip = 1;
+				BPS_Fault = 1;
+			}
+	osMutexRelease(MBMSStatusMutexHandle);
+		}
+	osStatus_t a4 = osMutexAcquire(MBMSStatusMutexHandle,READING_MUTEX_TIMEOUT);
+	if (a4 == osOK)
+	{
+		if((contactorcmd.motor == CLOSE_CONTACTOR) && (contactorInfo[MOTOR].line_current < NO_CURRENT_THRESHOLD)) ||
 
-}
+	}
+
+	}
 }
 
 

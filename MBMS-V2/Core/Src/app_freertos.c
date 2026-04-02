@@ -110,10 +110,23 @@ const osMutexAttr_t ContactorInfoMutex_attributes = {
 };
 
 osMutexId_t BatteryInfoMutexHandle;
-const osMutexAttr_t MBMSTripMutex_attributes = {
+const osMutexAttr_t BatteryInfoMutex_attributes = {
 		.name = "BatteryInfoMutex",
 		.attr_bits = osMutexPrioInherit,
 };
+
+osMutexId_t MBMSStatusMutexHandle;
+const osMutexAttr_t MBMSStatusMutex_attributes = {
+		.name = "MBMSStatusMutex",
+		.attr_bits = osMutexPrioInherit,
+};
+
+osMutexId_t ContactorCommandMutexHandle;
+const osMutexAttr_t ContactorCommandMutex_attributes = {
+  .name = "ContactorCommandMutex",
+  .attr_bits = osMutexPrioInherit,
+};
+
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
@@ -147,6 +160,9 @@ void MX_FREERTOS_Init(void) {
 
 	MBMSTripMutexHandle = osMutexNew(&MBMSTripMutex_attributes);
 	ContactorInfoMutexHandle = osMutexNew(&ContactorInfoMutex_attributes);
+	BatteryInfoMutexHandle = osMutexNew(&BatteryInfoMutex_attributes);
+	MBMSStatusMutexHandle = osMutexNew(&MBMSStatusMutex_attributes);
+	ContactorCommandMutexHandle = osMutexNew(&ContactorCommandMutex_attributes);
 
   /* USER CODE END RTOS_MUTEX */
 

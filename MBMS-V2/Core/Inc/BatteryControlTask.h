@@ -23,6 +23,7 @@
 #define HARD_MAX_ARRAY_CONTACTOR_CURRENT 	300
 #define HARD_MAX_LV_CONTACTOR_CURRENT 		300
 #define HARD_MAX_CHARGE_CONTACTOR_CURRENT  	300
+#define NO_CURRENT_THRESHOLD 				3 // (AMPS). So if less than this, consider no current, if more than this, consider there is current
 
 void BatteryControlTask(void* arg);
 void BatteryControl();

@@ -59,6 +59,8 @@ extern osThreadId_t defaultTaskHandle;
 extern osMutexId_t MBMSTripMutexHandle;
 extern osMutexId_t BatteryInfoMutexHandle;
 extern osMutexId_t ContactorInfoMutexHandle;
+extern osMutexId_t BatteryInfoMutexHandle;
+extern osMutexId_t ContactorCommandMutexHandle;
 
 /* Exported function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
