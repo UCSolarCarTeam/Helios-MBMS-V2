@@ -19,7 +19,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os2.h"
-//test -m
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -451,16 +450,16 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(_12V_CAN_EN_GPIO_Port, _12V_CAN_EN_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : MPS_Pin ESD_Pin nDCDC_Fault_Pin _14V_Charger_Fault_Pin
+  /*Configure GPIO pins : MPS_Pin ESD_Pin _12V_Critical_Fault_Pin _14V_Charger_Fault_Pin
                            _12V_Critical_UC_Pin */
-  GPIO_InitStruct.Pin = MPS_Pin|ESD_Pin|nDCDC_Fault_Pin|_14V_Charger_Fault_Pin
+  GPIO_InitStruct.Pin = MPS_Pin|ESD_Pin|_12V_Critical_Fault_Pin|_14V_Charger_Fault_Pin
                           |_12V_Critical_UC_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : DCDC1_Fault_Pin Common_CNTR_Aux_Pin Main_CNTR_Aux_Pin */
-  GPIO_InitStruct.Pin = DCDC1_Fault_Pin|Common_CNTR_Aux_Pin|Main_CNTR_Aux_Pin;
+  /*Configure GPIO pins : nDCDC_Fault_Pin Common_CNTR_Aux_Pin Main_CNTR_Aux_Pin */
+  GPIO_InitStruct.Pin = nDCDC_Fault_Pin|Common_CNTR_Aux_Pin|Main_CNTR_Aux_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
