@@ -220,7 +220,7 @@ void Update_ContactorInfoStruct() {
 void startupCheck() // change after this function is done: waitForFirstHeartbeats
 {
     /* Run startup gate checks in order. If any fail, enter fault. */
-    if (!waitForFirstHeartbeats())
+    if (waitForFirstHeartbeats())
     {
         enter_BPS_FAULT();   // preferred name from your header
         return;
@@ -345,15 +345,17 @@ uint8_t startupBatteryCheck()
 
 uint8_t checkPrechargersOpen()
 {
+	uint8_t pass = 1;
     for (int i = 0; i < NUM_OF_CNTR; i++)
     {
         /* If the precharger is reported closed, then it is NOT open. */
         if (contactorInfo[i].precharge_close == CLOSE_CONTACTOR)
         {
-            return 0;
+            pass = 0;
+            return pass;
         }
     }
-    return 1;
+    return pass;
 }
 
 
@@ -362,14 +364,16 @@ uint8_t checkPrechargersOpen()
 
 uint8_t checkContactorsOpen()
 {
+	uint8_t pass = 1;
     for (int i = 0; i < NUM_OF_CNTR; i++)
     {
         if (contactorInfo[i].contactor_close == CLOSE_CONTACTOR)
         {
-            return 0;
+        	pass = 0;
+            return pass;
         }
     }
-    return 1;
+    return pass;
 }
 
 
