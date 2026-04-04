@@ -1,0 +1,566 @@
+#include "BatteryControlTask.h"
+#include <stdint.h>
+#include "cmsis_os.h"
+#include "cmsis_os2.h"
+#include "CAN.h"
+//#include "StartupTask.h"
+//#include "ShutoffTask.h"
+//#include "ReadPowerGPIO.h"
+//#include "CANMessageSenderTask.h"
+#include "MBMS.h"
+#include "main.h"
+#include <string.h>
+
+
+extern osMessageQueueId_t ContactorQueueHandle; // Used GPT for this
+extern osMessageQueueId_t BatteryInfoQueueHandle; // Used GPT for this
+
+uint32_t BCT_start_tick = 0;
+uint32_t BCT_end_tick = 0;
+uint32_t BCT_difference_tick = 0;
+uint32_t BCT_difference_seconds = 0;
+uint32_t BCT_Counter = 0;
+uint32_t startup_Check_Counter = 0;
+uint8_t carState = BOOT;
+
+Contactor_Info contactorInfo[NUM_OF_CNTR] = {0};
+MBMS_Status mbmsStatus;
+BatteryInfo batteryInfo;
+MBMS_Hard_Trips mbmsHardTrips;
+MBMS_Soft_Trips mbmsSoftTrips;
+Permissions mbmsPermissions;
+DCDC_Stack dcdc_stack;
+
+
+uint32_t heartbeat_check_count = 0;
+uint16_t previousHeartbeats[NUM_OF_CNTR] = {0};
+heartbeatLastUpdatedTime[NUM_OF_CNTR] = {0};
+
+
+
+
+
+void enter_BOOT() {
+    /* 1. Set system state to BOOT */
+    carState = BOOT;
+
+    /* 2. Clear all trip conditions */
+    clear_Trips();
+    clear_SoftTrips();
+
+    /* 3. Reset permissions */
+    perms_init();
+
+    /* 4. Reset MBMS status */
+    MBMSStatus_init();
+
+    /* 5. Reset BCT timing variables */
+    BCT_start_tick = 0;
+    BCT_end_tick = 0;
+    BCT_difference_tick = 0;
+    BCT_difference_seconds = 0;
+
+    /* 6. Reset internal BCT counter */
+    BCT_Counter = 0;
+}
+
+
+
+
+
+void MBMSStatus_init(void)
+{
+    memset(&mbmsStatus, 0, sizeof(mbmsStatus));
+    mbmsStatus.Abatt_enable = 1;
+}
+
+
+
+
+void perms_init()
+{
+    // Reset all system permissions to safe defaults.
+    // This prevents the battery from charging or discharging
+    // until the startup checks are complete.
+
+    // TODO: set permission variables here
+	mbmsPermissions.lv = 0;
+	mbmsPermissions.motor = 0;
+	mbmsPermissions.array = 0;
+	mbmsPermissions.charge = 0;
+
+}
+
+
+
+
+
+void update_Counter(uint32_t *counter)
+{
+    // Make sure the pointer is valid
+    if (counter != NULL)
+    {
+        // Increase the value of the counter by 1
+        (*counter)++;
+    }
+}
+
+
+
+
+
+void BatteryControlTask(void* arg)
+{
+	uint32_t taskTickLastStart = osKernelGetTickCount();
+
+    while(1)
+    {
+    	BCT_start_tick = osKernelGetTickCount();
+    	BatteryControl();
+    	BCT_end_tick = osKernelGetTickCount();
+    	BCT_difference_tick = BCT_end_tick - BCT_start_tick;
+    	BCT_difference_seconds = taskTickLastStart;
+		taskTickLastStart += 10;
+		osDelayUntil(taskTickLastStart);
+    }
+}
+
+
+
+
+
+void BatteryControl() {
+
+	/* Updating structs */
+	Update_ContactorInfoStruct();
+	Update_DCDCStackStruct();
+	Update_BatteryInfoStruct();
+
+	/* Tracking states */
+	SystemStateMachine();
+
+	/* Opening/closing contactors */
+	Control_Contactors();
+
+	/* Updating BCT Counter */
+	update_Counter(&BCT_Counter);
+
+}
+
+
+
+
+void Update_ContactorInfoStruct() {
+	CANmsg contactorMsg;
+
+    osStatus_t status = osMessageQueueGet(ContactorQueueHandle, &contactorMsg, NULL, 0); // Take from que and put into struct
+    if (status != osOK) {
+        return; // no new message
+    }
+    // defines are in CAN.h for mask and ID
+    uint32_t extID = contactorMsg.extendedID;
+
+    // if the msg is a contactor info msg
+    if ((extID & CNTR_MSG_MASK) == CONTACTOR_ID){
+    	uint8_t contactor_idx = extID - CONTACTOR_ID;
+
+    	uint8_t *data = contactorMsg.data;
+
+		uint8_t 	prechargerClosed   		= (data[0] >> 0) & 0x1;
+		uint8_t 	prechargerClosing  		= (data[0] >> 1) & 0x1;
+		uint8_t 	prechargerError    		= (data[0] >> 2) & 0x1;
+		uint8_t 	contactorClosed    		= (data[0] >> 3) & 0x1;
+		uint8_t 	contactorClosing   		= (data[0] >> 4) & 0x1;
+		uint8_t 	contactorError     		= (data[0] >> 5) & 0x1;
+		uint8_t 	contactorOpeningError 	= (data[0] >> 6) & 0x1;
+		int16_t 	lineCurrent 			= ((data[0] & 0x80) >> 7) | (data[1] << 1) | ((data[2] & 0x07) << 9); // extract bits 7 to 18
+		int16_t 	chargeCurrent 			= ((data[2] & 0xF8) >> 3) | ((data[3] & 0x7F) >> 6); // extract bits 19 to 30
+
+		contactorInfo[contactor_idx].precharge_close = prechargerClosed;
+		contactorInfo[contactor_idx].precharge_closing = prechargerClosing;
+		contactorInfo[contactor_idx].precharge_error = prechargerError;
+		contactorInfo[contactor_idx].contactor_close = contactorClosed;
+		contactorInfo[contactor_idx].contactor_closing = contactorClosing;
+		contactorInfo[contactor_idx].contactor_error = contactorError;
+		contactorInfo[contactor_idx].contactor_opening_error = contactorOpeningError;
+		contactorInfo[contactor_idx].line_current = lineCurrent;
+		contactorInfo[contactor_idx].charge_current = chargeCurrent;
+
+
+    }														// This is where we split the messages into heartbeat or board
+    // if the msg is a contactor heartbeat msg. We split them again into which heartbeat CCP it is
+    else {
+    	uint8_t contactor_idx = extID - CONTACTOR_HEARTBEAT; // get index (which contactor it is)
+
+    	uint16_t new_heartbeat = contactorMsg.data[0] + (contactorMsg.data[1] << 8);
+    	contactorInfo[contactor_idx].heartbeat = new_heartbeat;
+
+    	return;
+
+    }
+
+//    void updateContactorInfo(uint8_t precharge_close,
+//    							uint8_t precharge_closing,
+//								uint8_t precharge_error,
+//								uint8_t contactor_close,
+//								uint8_t contactor_closing,
+//								uint8_t contactor_error,
+//								uint16_t line_current,
+//								uint16_t charge_current,
+//								uint8_t contactor_opening_error) {
+//
+//    }
+
+
+
+
+
+
+/*-------------------------------------------*/
+/* Startup checks */
+void startupCheck() // change after this function is done: waitForFirstHeartbeats
+{
+    /* Run startup gate checks in order. If any fail, enter fault. */
+    if (waitForFirstHeartbeats())
+    {
+        enter_BPS_FAULT();   // preferred name from your header
+        return;
+    }
+
+    if (!checkContactorsOpen() || !checkPrechargersOpen())
+    {
+    	enter_BPS_FAULT();
+        return;
+    }
+
+    if (!startupBatteryCheck())
+    {
+    	enter_BPS_FAULT();
+        return;
+    }
+}
+
+
+
+// Add mutexs around shared variables
+uint8_t waitForFirstHeartbeats() {
+
+
+	static uint8_t heartbeatFailCounter[NUM_OF_CNTR] = {0};
+	uint8_t dead = 0;
+
+
+		for(int i = 0; i < NUM_OF_CNTR; i++) {
+			heartbeat_check_count++;
+			// case that a ccp heartbeat has died
+			if (heartbeatFailCounter[i] > MAX_HEARTBEAT_FAILS) {
+				// from enum
+				switch (i) {
+					case LV:
+						mbmsHardTrips.LV_no_heartbeat_trip = 1;
+						break;
+					case MOTOR:
+						mbmsHardTrips.MT_no_heartbeat_trip = 1;
+						break;
+					case ARRAY:
+						mbmsHardTrips.AR_no_heartbeat_trip = 1;
+						break;
+					case CHARGE:
+						mbmsHardTrips.CHG_no_heartbeat_trip = 1;
+						break;
+				}
+
+				dead = 1;
+				return dead;
+			}
+
+			// case that the heartbeat has reached max value
+			if (previousHeartbeats[i] >= 65535) { // check this logic lol
+				previousHeartbeats[i] = 0;
+			}
+
+			// case that heartbeat update has timed out
+			// This checks whether the heartbeat did not increase.
+			if(previousHeartbeats[i] >= contactorInfo[i].heartbeat){
+				// If the heartbeat hasn't changed for too long, the system assumes it may have stalled.
+				if(((osKernelGetTickCount() - heartbeatLastUpdatedTime[i])) > CONTACTOR_HEARTBEAT_TIMEOUT) { // where contactor_heartbeat_timeout is how often a heartbeat is sent out/recieved
+					// The failure counter increases.
+					heartbeatFailCounter[i]++;
+
+				}
+			}
+			// If the heartbeat did increase, the controller is alive. (Updates the last heartbeat time, Resets the failure counter, Stores the new heartbeat value)
+			else {
+				heartbeatLastUpdatedTime[i] = osKernelGetTickCount();
+				heartbeatFailCounter[i] = 0;
+				previousHeartbeats[i] = (contactorInfo[i].heartbeat); // moved here from out of elae block - march 14
+			}
+
+			//previousHeartbeats[i] = (contactorInfo[i].heartbeat);
+
+		}
+
+	return dead;
+
+}
+
+
+
+
+
+uint8_t startupBatteryCheck()
+{
+    uint8_t pass = 1;
+
+    if (batteryInfo.highCellVoltage > HARD_MAX_CELL_VOLTAGE)
+    {
+        mbmsHardTrips.High_volt_cell_trip = 1;
+        pass = 0;
+    }
+
+    if (batteryInfo.lowCellVoltage < HARD_MIN_CELL_VOLTAGE)
+    {
+        mbmsHardTrips.Low_volt_cell_trip = 1;
+        pass = 0;
+    }
+
+    if (batteryInfo.highTemp > HARD_MAX_TEMP)
+    {
+        mbmsHardTrips.High_temp_trip = 1;
+        pass = 0;
+    }
+
+    if (batteryInfo.lowTemp < HARD_MIN_TEMP)
+    {
+        mbmsHardTrips.Low_temp_trip = 1;
+        pass = 0;
+    }
+
+    startup_Check_Counter++;
+    return pass;
+}
+
+
+
+
+
+uint8_t checkPrechargersOpen()
+{
+	uint8_t pass = 1;
+    for (int i = 0; i < NUM_OF_CNTR; i++)
+    {
+        /* If the precharger is reported closed, then it is NOT open. */
+        if (contactorInfo[i].precharge_close == CLOSE_CONTACTOR)
+        {
+            pass = 0;
+            return pass;
+        }
+    }
+    return pass;
+}
+
+
+
+
+
+uint8_t checkContactorsOpen()
+{
+	uint8_t pass = 1;
+    for (int i = 0; i < NUM_OF_CNTR; i++)
+    {
+        if (contactorInfo[i].contactor_close == CLOSE_CONTACTOR)
+        {
+        	pass = 0;
+            return pass;
+        }
+    }
+    return pass;
+}
+
+
+
+
+
+/*-------------------------------------------*/
+
+// Had to use AI for these bottom functions:
+void clear_Trips()
+{
+    /* Reset all hard trip flags to 0 */
+    memset(&mbmsHardTrips, 0, sizeof(MBMS_Hard_Trips));
+
+}
+
+
+
+
+
+void clear_SoftTrips()
+{
+    /* Reset all soft battery trip flags */
+    memset(&mbmsSoftTrips, 0, sizeof(MBMS_Soft_Trips));
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// LATER TASKS //
+void Update_DCDCStackStruct(void) //update power selection struct
+{
+	// HELLO TEST TEST
+
+	dcdc_stack.DCDC1_en = DCDC1_EN();
+	dcdc_stack._14V_Charge_EN = _14V_Charge_EN();
+	dcdc_stack.DCDC1_Fault = nDCDC1_Fault();
+	dcdc_stack._12V_Critical_Fault = _12V_Critical_Fault();
+	dcdc_stack._14V_Charger_Fault = _14V_Charger_Fault();
+	dcdc_stack._12V_Critical_UC = _12V_Critical_UC();
+
+    /* Stub: define later when DCDC stack struct logic is ready */
+}
+
+
+
+
+
+// This function reads battery-related CAN messages from a queue
+// and updates the batteryInfo struct accordingly
+void Update_BatteryInfoStruct(void) // updating Orion / battery info struct
+{
+    CANmsg batteryMsg;  // Variable to store incoming CAN message
+
+    // Keeps track of how many cycles we have NOT received a message
+    static uint8_t BatteryInfoStruct_MessageCounter = 0;
+
+    // Try to get a message from the queue
+    osStatus_t status = osMessageQueueGet(BatteryInfoQueueHandle, &batteryMsg, NULL, 0);
+
+    // If a message was successfully received
+    if (status == osOK)
+    {
+        // Reset timeout counter since we got a message
+        BatteryInfoStruct_MessageCounter = 0;
+
+        // Indicate CAN communication is healthy
+        mbmsStatus.OBMS_CAN_RR = 1;
+
+        // Clear timeout fault
+        mbmsHardTrips.OBMS_msg_timeout_trip = 0;
+
+        // Pointer to the raw data bytes in the CAN message
+        uint8_t *data = batteryMsg.data;
+
+        // Check if this message contains pack-level information
+        if (batteryMsg.extendedID == PACK_INFO)
+        {
+            // Ensure message has enough bytes
+            if (batteryMsg.DLC >= 8) // ?? its ok -m
+            {
+                // Extract pack current (2 bytes, scaled by 10)
+                batteryInfo.packCurrent  = (float)((uint16_t)(data[0] | (data[1] << 8))) / 10.0f;
+
+                // Extract pack voltage (2 bytes, scaled by 10)
+                batteryInfo.packVoltage  = (float)((uint16_t)(data[2] | (data[3] << 8))) / 10.0f;
+
+                // Extract state of charge (1 byte, scaled by 2)
+                batteryInfo.packSOC      = (float)(data[4]) / 2.0f;
+
+                // Extract amp-hours (2 bytes, scaled by 10)
+                batteryInfo.packAmphours = (float)((uint16_t)(data[5] | (data[6] << 8))) / 10.0f;
+
+                // Extract depth of discharge (1 byte, scaled by 2)
+                batteryInfo.packDOD      = (float)(data[7]) / 2.0f;
+            }
+        }
+
+        // Check if this message contains temperature data
+        else if (batteryMsg.extendedID == TEMP_INFO)
+        {
+            // Ensure message has enough bytes
+            if (batteryMsg.DLC >= 5)
+            {
+                // Highest temperature in pack
+                batteryInfo.highTemp = data[0];
+
+                // Lowest temperature (cast to signed value)
+                batteryInfo.lowTemp  = (int8_t)data[2];
+
+                // Average temperature
+                batteryInfo.avgTemp  = data[4];
+            }
+        }
+
+        // Check if this message contains cell voltage data
+        else if (batteryMsg.extendedID == CELL_VOLTAGES)
+        {
+            // Ensure message has enough bytes
+            if (batteryMsg.DLC >= 6) // check also
+            {
+                // Lowest cell voltage (2 bytes, scaled by 10000)
+                batteryInfo.lowCellVoltage    = (float)((uint16_t)(data[0] | (data[1] << 8))) / 10000.0f;
+
+                // ID/index of lowest voltage cell
+                batteryInfo.lowCellVoltageID  = data[2];
+
+                // Highest cell voltage (2 bytes, scaled by 10000)
+                batteryInfo.highCellVoltage   = (float)((uint16_t)(data[3] | (data[4] << 8))) / 10000.0f;
+
+                // ID/index of highest voltage cell
+                batteryInfo.highCellVoltageID = data[5];
+            }
+        }
+
+        // Other message types (STARTUP_INFO, ERRORS, etc.) are not handled yet
+    }
+    else
+    {
+        // No message received → increment timeout counter
+        BatteryInfoStruct_MessageCounter++; // this is bad
+    }
+
+    // If we missed too many messages in a row (timeout condition)
+    if (BatteryInfoStruct_MessageCounter >= 21) // check
+    {
+        // Mark CAN communication as lost
+        mbmsStatus.OBMS_CAN_RR = 0;
+
+        // Trigger a fault/trip due to message timeout
+        mbmsHardTrips.OBMS_msg_timeout_trip = 1;
+    }
+}
+
+
+
+
+
+void SystemStateMachine(void)
+{
+    /* Stub: define later when state machine logic is ready */
+}
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
