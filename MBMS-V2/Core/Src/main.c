@@ -260,7 +260,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.DataSize = SPI_DATASIZE_4BIT;
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
-  hspi1.Init.NSS = SPI_NSS_SOFT;
+  hspi1.Init.NSS = SPI_NSS_HARD_OUTPUT;
   hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
@@ -442,24 +442,24 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(DCDC1_EN_GPIO_Port, DCDC1_EN_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, _12V_CAN_PCHG_Pin|Strobe_EN_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, _12V_CAN_PCHG_Pin|BPS_Fault_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, _14V_Charge_EN_Pin|Abatt_EN_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(_12V_CAN_GPIO_Port, _12V_CAN_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(_12V_CAN_EN_GPIO_Port, _12V_CAN_EN_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : MPS_Pin ESD_Pin nDCDC_Fault_Pin _14V_Charger_Fault_Pin
-                           _12V_Critical_UC_Pin _12V_Critical_Pin */
-  GPIO_InitStruct.Pin = MPS_Pin|ESD_Pin|nDCDC_Fault_Pin|_14V_Charger_Fault_Pin
-                          |_12V_Critical_UC_Pin|_12V_Critical_Pin;
+  /*Configure GPIO pins : MPS_Pin ESD_Pin _12V_Critical_Fault_Pin _14V_Charger_Fault_Pin
+                           _12V_Critical_UC_Pin */
+  GPIO_InitStruct.Pin = MPS_Pin|ESD_Pin|_12V_Critical_Fault_Pin|_14V_Charger_Fault_Pin
+                          |_12V_Critical_UC_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : DCDC1_Fault_Pin Common_CNTR_Aux_Pin Main_CNTR_Aux_Pin */
-  GPIO_InitStruct.Pin = DCDC1_Fault_Pin|Common_CNTR_Aux_Pin|Main_CNTR_Aux_Pin;
+  /*Configure GPIO pins : nDCDC_Fault_Pin Common_CNTR_Aux_Pin Main_CNTR_Aux_Pin */
+  GPIO_InitStruct.Pin = nDCDC_Fault_Pin|Common_CNTR_Aux_Pin|Main_CNTR_Aux_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
@@ -477,8 +477,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(_12V_CAN_State_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : _12V_CAN_PCHG_Pin Strobe_EN_Pin */
-  GPIO_InitStruct.Pin = _12V_CAN_PCHG_Pin|Strobe_EN_Pin;
+  /*Configure GPIO pins : _12V_CAN_PCHG_Pin BPS_Fault_Pin */
+  GPIO_InitStruct.Pin = _12V_CAN_PCHG_Pin|BPS_Fault_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -497,12 +497,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : _12V_CAN_Pin */
-  GPIO_InitStruct.Pin = _12V_CAN_Pin;
+  /*Configure GPIO pin : _12V_CAN_EN_Pin */
+  GPIO_InitStruct.Pin = _12V_CAN_EN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(_12V_CAN_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(_12V_CAN_EN_GPIO_Port, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
