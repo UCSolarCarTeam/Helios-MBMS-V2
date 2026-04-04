@@ -13,6 +13,7 @@
 
 
 extern osMessageQueueId_t ContactorQueueHandle; // Used GPT for this
+extern osMessageQueueId_t BatteryInfoQueueHandle; // Used GPT for this
 
 uint32_t BCT_start_tick = 0;
 uint32_t BCT_end_tick = 0;
@@ -414,12 +415,12 @@ void Update_DCDCStackStruct(void) //update power selection struct
 {
 	// HELLO TEST TEST
 
-	dcdc_stack.DCDC1_en = DCDC1_en();
-	dcdc_stack.MBMS_charge_12V_enable = MBMS_charge_12V_enable();
-	dcdc_stack.DCDC1_fault = DCDC1_fault();
-	dcdc_stack.critical_fault = critical_fault();
-	dcdc_stack.charger_fault = charger_fault();
-	dcdc_stack.critical_OC = critical_OC();
+	dcdc_stack.DCDC1_en = DCDC1_EN();
+	dcdc_stack._14V_Charge_EN = _14V_Charge_EN();
+	dcdc_stack.DCDC1_Fault = nDCDC1_Fault();
+	dcdc_stack._12V_Critical_Fault = _12V_Critical_Fault();
+	dcdc_stack._14V_Charger_Fault = _14V_Charger_Fault();
+	dcdc_stack._12V_Critical_UC = _12V_Critical_UC();
 
     /* Stub: define later when DCDC stack struct logic is ready */
 }
@@ -428,9 +429,110 @@ void Update_DCDCStackStruct(void) //update power selection struct
 
 
 
-void Update_BatteryInfoStruct(void) //updating orion info struct
+// This function reads battery-related CAN messages from a queue
+// and updates the batteryInfo struct accordingly
+void Update_BatteryInfoStruct(void) // updating Orion / battery info struct
 {
-    /* Stub: define later when battery info update logic is ready */
+    CANmsg batteryMsg;  // Variable to store incoming CAN message
+
+    // Keeps track of how many cycles we have NOT received a message
+    static uint8_t BatteryInfoStruct_MessageCounter = 0;
+
+    // Try to get a message from the queue
+    osStatus_t status = osMessageQueueGet(BatteryInfoQueueHandle, &batteryMsg, NULL, 0);
+
+    // If a message was successfully received
+    if (status == osOK)
+    {
+        // Reset timeout counter since we got a message
+        BatteryInfoStruct_MessageCounter = 0;
+
+        // Indicate CAN communication is healthy
+        mbmsStatus.OBMS_CAN_RR = 1;
+
+        // Clear timeout fault
+        mbmsHardTrips.OBMS_msg_timeout_trip = 0;
+
+        // Pointer to the raw data bytes in the CAN message
+        uint8_t *data = batteryMsg.data;
+
+        // Check if this message contains pack-level information
+        if (batteryMsg.extendedID == PACK_INFO)
+        {
+            // Ensure message has enough bytes
+            if (batteryMsg.DLC >= 8) // ?? its ok -m
+            {
+                // Extract pack current (2 bytes, scaled by 10)
+                batteryInfo.packCurrent  = (float)((uint16_t)(data[0] | (data[1] << 8))) / 10.0f;
+
+                // Extract pack voltage (2 bytes, scaled by 10)
+                batteryInfo.packVoltage  = (float)((uint16_t)(data[2] | (data[3] << 8))) / 10.0f;
+
+                // Extract state of charge (1 byte, scaled by 2)
+                batteryInfo.packSOC      = (float)(data[4]) / 2.0f;
+
+                // Extract amp-hours (2 bytes, scaled by 10)
+                batteryInfo.packAmphours = (float)((uint16_t)(data[5] | (data[6] << 8))) / 10.0f;
+
+                // Extract depth of discharge (1 byte, scaled by 2)
+                batteryInfo.packDOD      = (float)(data[7]) / 2.0f;
+            }
+        }
+
+        // Check if this message contains temperature data
+        else if (batteryMsg.extendedID == TEMP_INFO)
+        {
+            // Ensure message has enough bytes
+            if (batteryMsg.DLC >= 5)
+            {
+                // Highest temperature in pack
+                batteryInfo.highTemp = data[0];
+
+                // Lowest temperature (cast to signed value)
+                batteryInfo.lowTemp  = (int8_t)data[2];
+
+                // Average temperature
+                batteryInfo.avgTemp  = data[4];
+            }
+        }
+
+        // Check if this message contains cell voltage data
+        else if (batteryMsg.extendedID == CELL_VOLTAGES)
+        {
+            // Ensure message has enough bytes
+            if (batteryMsg.DLC >= 6) // check also
+            {
+                // Lowest cell voltage (2 bytes, scaled by 10000)
+                batteryInfo.lowCellVoltage    = (float)((uint16_t)(data[0] | (data[1] << 8))) / 10000.0f;
+
+                // ID/index of lowest voltage cell
+                batteryInfo.lowCellVoltageID  = data[2];
+
+                // Highest cell voltage (2 bytes, scaled by 10000)
+                batteryInfo.highCellVoltage   = (float)((uint16_t)(data[3] | (data[4] << 8))) / 10000.0f;
+
+                // ID/index of highest voltage cell
+                batteryInfo.highCellVoltageID = data[5];
+            }
+        }
+
+        // Other message types (STARTUP_INFO, ERRORS, etc.) are not handled yet
+    }
+    else
+    {
+        // No message received → increment timeout counter
+        BatteryInfoStruct_MessageCounter++; // this is bad
+    }
+
+    // If we missed too many messages in a row (timeout condition)
+    if (BatteryInfoStruct_MessageCounter >= 21) // check
+    {
+        // Mark CAN communication as lost
+        mbmsStatus.OBMS_CAN_RR = 0;
+
+        // Trigger a fault/trip due to message timeout
+        mbmsHardTrips.OBMS_msg_timeout_trip = 1;
+    }
 }
 
 
@@ -441,6 +543,8 @@ void SystemStateMachine(void)
 {
     /* Stub: define later when state machine logic is ready */
 }
+
+
 }
 
 
