@@ -37,37 +37,6 @@ heartbeatLastUpdatedTime[NUM_OF_CNTR] = {0};
 
 
 
-
-
-void enter_BOOT() {
-
-    /* 1. Set system state to BOOT */
-    carState = BOOT;
-
-    /* 2. Clear all trip conditions */
-    clear_Trips();
-    clear_SoftTrips();
-
-    /* 3. Reset permissions */
-    perms_init();
-
-    /* 4. Reset MBMS status */
-    MBMSStatus_init();
-
-    /* 5. Reset BCT timing variables */
-    BCT_start_tick = 0;
-    BCT_end_tick = 0;
-    BCT_difference_tick = 0;
-    BCT_difference_seconds = 0;
-
-    /* 6. Reset internal BCT counter */
-    BCT_Counter = 0;
-}
-
-
-
-
-
 void MBMSStatus_init(void)
 {
     memset(&mbmsStatus, 0, sizeof(mbmsStatus));
@@ -148,7 +117,57 @@ void BatteryControl() {
 }
 
 
+void enter_BOOT() {
 
+    /* 1. Set system state to BOOT */
+    carState = BOOT;
+
+    /* 2. Clear all trip conditions */
+    clear_Trips();
+    clear_SoftTrips();
+
+    /* 3. Reset permissions */
+    perms_init();
+
+    /* 4. Reset MBMS status */
+    MBMSStatus_init();
+
+    /* 5. Reset BCT timing variables */
+    BCT_start_tick = 0;
+    BCT_end_tick = 0;
+    BCT_difference_tick = 0;
+    BCT_difference_seconds = 0;
+
+    /* 6. Reset internal BCT counter */
+    BCT_Counter = 0;
+}
+
+
+/* ------ System State Switching Functions ------ */
+
+void enter_MPS_DISCONNECTED()
+{
+
+}
+
+void enter_BPS_FAULT() {
+
+}
+
+void enter_SOFT_TRIP() {
+
+}
+
+void enter_CHARGING() {
+
+}
+
+void enter_FULLY_OPERATIONAL() {
+
+}
+
+
+/* ------ Updating Information Functions ------ */
 
 void Update_ContactorInfoStruct() {
 	CANmsg contactorMsg;
@@ -199,21 +218,21 @@ void Update_ContactorInfoStruct() {
     return;
 }
 
-//    void updateContactorInfo(uint8_t precharge_close,
-//    							uint8_t precharge_closing,
-//								uint8_t precharge_error,
-//								uint8_t contactor_close,
-//								uint8_t contactor_closing,
-//								uint8_t contactor_error,
-//								uint16_t line_current,
-//								uint16_t charge_current,
-//								uint8_t contactor_opening_error) {
-//
-//    }
+
+// LATER TASKS //
+void Update_DCDCStackStruct(void)
+{
+    /* Stub: define later when DCDC stack struct logic is ready */
+}
 
 
 
 
+
+void Update_BatteryInfoStruct(void)
+{
+    /* Stub: define later when battery info update logic is ready */
+}
 
 
 /*-------------------------------------------*/
@@ -372,64 +391,12 @@ uint8_t checkContactorsOpen()
 }
 
 
+/* ----------------------- */
 
+/* ------ Main Control Functions ----- */
 
+void SystemStateMachine() {
 
-/*-------------------------------------------*/
-
-// Had to use AI for these bottom functions:
-void clear_Trips()
-{
-    /* Reset all hard trip flags to 0 */
-    memset(&mbmsHardTrips, 0, sizeof(MBMS_Hard_Trips));
-
-}
-
-
-
-
-
-void clear_SoftTrips()
-{
-    /* Reset all soft battery trip flags */
-    memset(&mbmsSoftTrips, 0, sizeof(MBMS_Soft_Trips));
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// LATER TASKS //
-void Update_DCDCStackStruct(void)
-{
-    /* Stub: define later when DCDC stack struct logic is ready */
-}
-
-
-
-
-
-void Update_BatteryInfoStruct(void)
-{
-    /* Stub: define later when battery info update logic is ready */
-}
-
-
-
-
-
-void SystemStateMachine(void)
-{
-    /* Stub: define later when state machine logic is ready */
 }
 
 
@@ -448,16 +415,16 @@ void Control_Contactors()
 	}
 	//if no contactors are in the process of closing and the battery is nor in fault tpe state (MPS,BPS)
 	if (!contactorClosing && !mbmsPermissions.faulted){
-		if((mbmsPermissions.lv) && (contactorInfo[LV].contactor_close != CLOSE_CONTACTOR) && (mbmsStatus.discharge_enable == 0)){
+		if((mbmsPermissions.lv) && (contactorInfo[LV].contactor_close != CLOSE_CONTACTOR) && (mbmsStatus.discharge_enable == 1)){
 			contactorcmd.low_voltage = CLOSE_CONTACTOR;
 		}
-		else if ((mbmsPermissions.motor) && (contactorInfo[MOTOR].contactor_close != CLOSE_CONTACTOR ) && (mbmsStatus.discharge_enable == 0)){
+		else if ((mbmsPermissions.motor) && (contactorInfo[MOTOR].contactor_close != CLOSE_CONTACTOR ) && (mbmsStatus.discharge_enable == 1)){
 				contactorcmd.motor = CLOSE_CONTACTOR;
 		}
-		else if ((mbmsPermissions.array) && (contactorInfo[ARRAY].contactor_close != CLOSE_CONTACTOR) && (mbmsStatus.charge_enable == 0)){
+		else if ((mbmsPermissions.array) && (contactorInfo[ARRAY].contactor_close != CLOSE_CONTACTOR) && (mbmsStatus.charge_enable == 1)){
 				contactorcmd.array = CLOSE_CONTACTOR;
 		}
-		else if ((mbmsPermissions.charge) && (contactorInfo[CHARGE].contactor_close != CLOSE_CONTACTOR) && (mbmsStatus.charge_enable == 0)){
+		else if ((mbmsPermissions.charge) && (contactorInfo[CHARGE].contactor_close != CLOSE_CONTACTOR) && (mbmsStatus.charge_enable == 1)){
 				contactorcmd.charge = CLOSE_CONTACTOR;
 		}
 	}
@@ -497,34 +464,38 @@ void Update_TripStruct()
 		{
 			if(batteryInfo.packCurrent > HARD_MAX_COMMON_CONTACTOR_CURRENT )
 			{
-				mbmsHardTrips.CMN_high_cur_trip =1;
-				BPS_Fault =1;
+				mbmsHardTrips.CMN_high_cur_trip = 1;
+				BPS_Fault = 1;
 			}
 
 			if(contactorInfo[MOTOR].line_current > HARD_MAX_MOTORS_CONTACTOR_CURRENT)
 			{
 				MBMS_Hard_Trips.MT_high_cur_trip = 1;
+				BPS_Fault = 1;
 			}
 
 			if(contactorInfo[ARRAY].line_current > HARD_MAX_ARRAY_CONTACTOR_CURRENT)
 			{
 				MBMS_Hard_Trips.AR_high_cur_trip = 1;
+				BPS_Fault = 1;
 			}
 
 			if(contactorInfo[LV].line_current > HARD_MAX_LV_CONTACTOR_CURRENT)
 			{
 				MBMS_Hard_Trips.LV_high_cur_trip = 1;
+				BPS_Fault = 1;
 			}
 
 			if(contactorInfo[CHARGE].line_current > HARD_MAX_CHARGE_CONTACTOR_CURRENT)
 			{
 				MBMS_Hard_Trips.CHG_high_cur_trip = 1;
+				BPS_Fault = 1;
 			}
 
-			if(contactorInfo[CHARGE].line_current > 0 || contactorInfo[LV].line_current <0)
+			if(contactorInfo[CHARGE].line_current > 0 || contactorInfo[LV].line_current < 0)
 			{
 				MBMS_Hard_Trips.Resverse_cur_trip = 1;
-				BPS_Fault =1;
+				BPS_Fault = 1;
 			}
 
 			osMutexRelease(ContactorInfoMutexHandle);
@@ -534,48 +505,48 @@ void Update_TripStruct()
 
 
 
-	osStatus_t a2 = osMutexAcquire(BatteryInfoMutexHandle,READING_MUTEX_TIMEOUT);
+	osStatus_t a2 = osMutexAcquire(BatteryInfoMutexHandle, READING_MUTEX_TIMEOUT);
 	if(a2 == osOK)
 	{
 		if(batteryInfo.highCellVoltage > HARD_MAX_CELL_VOLTAGE)
 		{
 			MBMS_Hard_Trips.High_volt_cell_trip = 1;
-			BPS_Fault =1;
+			BPS_Fault = 1;
 		}
 
 		if(batteryInfo.lowCellVoltage < HARD_MIN_CELL_VOLTAGE)
 		{
 			MBMS_Hard_Trips.Low_volt_cell_trip = 1;
-			BPS_Fault =1;
+			BPS_Fault = 1;
 		}
 
 		if(batteryInfo.highTemp > HARD_MAX_TEMP)
 		{
 			MBMS_Hard_Trips.High_temp_trip = 1;
-			BPS_Fault =1;
+			BPS_Fault = 1;
 		}
 
 		if(batteryInfo.lowTemp < HARD_MIN_TEMP)
 		{
 			MBMS_Hard_Trips.Low_temp_trip = 1;
-			BPS_Fault =1;
+			BPS_Fault = 1;
 		}
 
 		osMutexRelease(BatteryInfoMutexHandle);
 	}
 
-	osStatus_t a3 = osMutexAcquire(MBMSStatusMutexHandle,READING_MUTEX_TIMEOUT);
+	osStatus_t a3 = osMutexAcquire(MBMSStatusMutexHandle, READING_MUTEX_TIMEOUT);
 	if (a3 == osOK)
+	{
+		//if orion CAN msg wasnt received recently, trip set
+		if(!(mbmsStatus.OBMS_CAN_RR))
 		{
-			//if orion CAN msg wasnt received recently, trip set
-			if(!(mbmsStatus.OBMS_CAN_RR))
-			{
-				MBMS_Hard_Trips.OBMS_msg_timeout_trip = 1;
-				BPS_Fault = 1;
-			}
-	osMutexRelease(MBMSStatusMutexHandle);
+			MBMS_Hard_Trips.OBMS_msg_timeout_trip = 1;
+			BPS_Fault = 1;
 		}
-	osStatus_t a4 = osMutexAcquire(MBMSStatusMutexHandle,READING_MUTEX_TIMEOUT);
+		osMutexRelease(MBMSStatusMutexHandle);
+	}
+	osStatus_t a4 = osMutexAcquire(MBMSStatusMutexHandle, READING_MUTEX_TIMEOUT);
 	if (a4 == osOK)
 	{
 		if((contactorcmd.motor == CLOSE_CONTACTOR) && (contactorInfo[MOTOR].line_current < NO_CURRENT_THRESHOLD)) ||
@@ -583,6 +554,27 @@ void Update_TripStruct()
 	}
 
 	}
+}
+
+
+/*-------------------------------------------*/
+
+// Had to use AI for these bottom functions:
+void clear_Trips()
+{
+    /* Reset all hard trip flags to 0 */
+    memset(&mbmsHardTrips, 0, sizeof(MBMS_Hard_Trips));
+
+}
+
+
+
+
+
+void clear_SoftTrips()
+{
+    /* Reset all soft battery trip flags */
+    memset(&mbmsSoftTrips, 0, sizeof(MBMS_Soft_Trips));
 }
 
 
