@@ -65,10 +65,10 @@ void Error_Handler(void);
 #define DEBUG_UART4_TX_GPIO_Port GPIOA
 #define DEBUG_UART4_RX_Pin GPIO_PIN_1
 #define DEBUG_UART4_RX_GPIO_Port GPIOA
-#define DCDC1_Fault_Pin GPIO_PIN_2
-#define DCDC1_Fault_GPIO_Port GPIOB
-#define nDCDC_Fault_Pin GPIO_PIN_7
-#define nDCDC_Fault_GPIO_Port GPIOE
+#define nDCDC_Fault_Pin GPIO_PIN_2
+#define nDCDC_Fault_GPIO_Port GPIOB
+#define _12V_Critical_Fault_Pin GPIO_PIN_7
+#define _12V_Critical_Fault_GPIO_Port GPIOE
 #define _14V_Charger_Fault_Pin GPIO_PIN_8
 #define _14V_Charger_Fault_GPIO_Port GPIOE
 #define _12V_Critical_UC_Pin GPIO_PIN_9
