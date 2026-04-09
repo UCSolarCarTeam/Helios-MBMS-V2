@@ -11,6 +11,8 @@
 #include "main.h"
 #include <string.h>
 #include <stdbool.h>
+#include <app_freertos.h>
+
 
 
 extern osMessageQueueId_t ContactorQueueHandle; // Used GPT for this
@@ -457,9 +459,9 @@ void Update_TripStruct()
 {
 	static uint8_t BPS_Fault = 0;
 	osStatus_t acquire = osMutexAcquire(MBMSTripMutexHandle,UPDATING_MUTEX_TIMEOUT);
-	if(aquire == osOK)
+	if(acquire == osOK)
 	{
-		osStatus_t a1 = osMutexAcquire(ContactorInfoMutexHandle,UPDATING_MUTEX_TIMEOUT )
+		osStatus_t a1 = osMutexAcquire(ContactorInfoMutexHandle,UPDATING_MUTEX_TIMEOUT );
 		if(a1 == osOK)
 		{
 			if(batteryInfo.packCurrent > HARD_MAX_COMMON_CONTACTOR_CURRENT )
@@ -470,31 +472,31 @@ void Update_TripStruct()
 
 			if(contactorInfo[MOTOR].line_current > HARD_MAX_MOTORS_CONTACTOR_CURRENT)
 			{
-				MBMS_Hard_Trips.MT_high_cur_trip = 1;
+				mbmsHardTrips.MT_high_cur_trip = 1;
 				BPS_Fault = 1;
 			}
 
 			if(contactorInfo[ARRAY].line_current > HARD_MAX_ARRAY_CONTACTOR_CURRENT)
 			{
-				MBMS_Hard_Trips.AR_high_cur_trip = 1;
+				mbmsHardTrips.AR_high_cur_trip = 1;
 				BPS_Fault = 1;
 			}
 
 			if(contactorInfo[LV].line_current > HARD_MAX_LV_CONTACTOR_CURRENT)
 			{
-				MBMS_Hard_Trips.LV_high_cur_trip = 1;
+				mbmsHardTrips.LV_high_cur_trip = 1;
 				BPS_Fault = 1;
 			}
 
 			if(contactorInfo[CHARGE].line_current > HARD_MAX_CHARGE_CONTACTOR_CURRENT)
 			{
-				MBMS_Hard_Trips.CHG_high_cur_trip = 1;
+				mbmsHardTrips.CHG_high_cur_trip = 1;
 				BPS_Fault = 1;
 			}
 
 			if(contactorInfo[CHARGE].line_current > 0 || contactorInfo[LV].line_current < 0)
 			{
-				MBMS_Hard_Trips.Resverse_cur_trip = 1;
+				mbmsHardTrips.Resverse_cur_trip = 1;
 				BPS_Fault = 1;
 			}
 
@@ -510,25 +512,25 @@ void Update_TripStruct()
 	{
 		if(batteryInfo.highCellVoltage > HARD_MAX_CELL_VOLTAGE)
 		{
-			MBMS_Hard_Trips.High_volt_cell_trip = 1;
+			mbmsHardTrips.High_volt_cell_trip = 1;
 			BPS_Fault = 1;
 		}
 
 		if(batteryInfo.lowCellVoltage < HARD_MIN_CELL_VOLTAGE)
 		{
-			MBMS_Hard_Trips.Low_volt_cell_trip = 1;
+			mbmsHardTrips.Low_volt_cell_trip = 1;
 			BPS_Fault = 1;
 		}
 
 		if(batteryInfo.highTemp > HARD_MAX_TEMP)
 		{
-			MBMS_Hard_Trips.High_temp_trip = 1;
+			mbmsHardTrips.High_temp_trip = 1;
 			BPS_Fault = 1;
 		}
 
 		if(batteryInfo.lowTemp < HARD_MIN_TEMP)
 		{
-			MBMS_Hard_Trips.Low_temp_trip = 1;
+			mbmsHardTrips.Low_temp_trip = 1;
 			BPS_Fault = 1;
 		}
 
@@ -541,18 +543,57 @@ void Update_TripStruct()
 		//if orion CAN msg wasnt received recently, trip set
 		if(!(mbmsStatus.OBMS_CAN_RR))
 		{
-			MBMS_Hard_Trips.OBMS_msg_timeout_trip = 1;
+			mbmsHardTrips.OBMS_msg_timeout_trip = 1;
 			BPS_Fault = 1;
 		}
 		osMutexRelease(MBMSStatusMutexHandle);
 	}
-	osStatus_t a4 = osMutexAcquire(MBMSStatusMutexHandle, READING_MUTEX_TIMEOUT);
+	osStatus_t a4 = osMutexAcquire(ContactorCommandMutexHandle, READING_MUTEX_TIMEOUT);
 	if (a4 == osOK)
 	{
-		if((contactorcmd.motor == CLOSE_CONTACTOR) && (contactorInfo[MOTOR].line_current < NO_CURRENT_THRESHOLD)) ||
+		/* Contactor disconnected unexpectedely */
+		/* To check, we compare a minimum current draw with the state of the contactor */
+		if(((contactorcmd.motor == CLOSE_CONTACTOR) 	 && 	(contactorInfo[MOTOR].line_current < NO_CURRENT_THRESHOLD)) 	 ||
+		  ((contactorcmd.array == CLOSE_CONTACTOR) 		 && 	(contactorInfo[ARRAY].line_current < NO_CURRENT_THRESHOLD)) 	 ||
+		  ((contactorcmd.low_voltage == CLOSE_CONTACTOR) && 	(contactorInfo[LV].line_current < NO_CURRENT_THRESHOLD)) 		 ||
+		  ((contactorcmd.charge == CLOSE_CONTACTOR) 	 && 	(contactorInfo[CHARGE].line_current < NO_CURRENT_THRESHOLD))
+		)
+
+
+	{
+
+	mbmsHardTrips.CNTR_disconnect_trip = 1;
 
 	}
+		/* Contactor connected unexpectedly trip */
+		if(((contactorcmd.motor == OPEN_CONTACTOR) 		&& 	(contactorInfo[MOTOR].line_current >= NO_CURRENT_THRESHOLD)) 	 ||
+		  ((contactorcmd.array == OPEN_CONTACTOR) 	    && 	(contactorInfo[ARRAY].line_current >= NO_CURRENT_THRESHOLD)) 	 ||
+		  ((contactorcmd.low_voltage == OPEN_CONTACTOR) && 	(contactorInfo[LV].line_current >= NO_CURRENT_THRESHOLD)) 		 ||
+		  ((contactorcmd.charge == OPEN_CONTACTOR) 	    && 	(contactorInfo[CHARGE].line_current >= NO_CURRENT_THRESHOLD)))
 
+	{
+
+	mbmsHardTrips.CNTR_disconnect_trip = 1;
+	BPS_Fault = 1;
+
+	}
+		/* Here, it is also a contactor connected unexpectedly trip if the contactor won't open when told to */
+		for(int i = 0; i < 5; i++)
+		{
+			if(contactorInfo[i].contactor_opening_error ==1 )
+			{
+				mbmsHardTrips.CNTR_connect_trip = 1;
+				BPS_Fault = 1;
+			}
+		}
+
+		osMutexRelease(ContactorCommandMutexHandle);
+
+		if(BPS_Fault)
+		{
+			enter_BPS_FAULT();
+		}
+	}
 	}
 }
 

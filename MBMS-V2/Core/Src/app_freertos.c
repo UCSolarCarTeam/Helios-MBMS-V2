@@ -105,8 +105,8 @@ const osMutexAttr_t MBMSTripMutex_attributes = {
 
 osMutexId_t ContactorInfoMutexHandle;
 const osMutexAttr_t ContactorInfoMutex_attributes = {
-  .name = "ContactorInfoMutex",
-  .attr_bits = osMutexPrioInherit,
+	  .name = "ContactorInfoMutex",
+      .attr_bits = osMutexPrioInherit,
 };
 
 osMutexId_t BatteryInfoMutexHandle;
@@ -123,8 +123,8 @@ const osMutexAttr_t MBMSStatusMutex_attributes = {
 
 osMutexId_t ContactorCommandMutexHandle;
 const osMutexAttr_t ContactorCommandMutex_attributes = {
-  .name = "ContactorCommandMutex",
-  .attr_bits = osMutexPrioInherit,
+      .name = "ContactorCommandMutex",
+      .attr_bits = osMutexPrioInherit,
 };
 
 /* USER CODE END Variables */
