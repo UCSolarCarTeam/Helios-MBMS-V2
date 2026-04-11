@@ -79,6 +79,7 @@ static void CAN_Rx()
  			{
  			 	contactorqueuefull++;
  		    }
+<<<<<<< HEAD
  			//else
 
  		 }
@@ -88,6 +89,10 @@ static void CAN_Rx()
 	// CHECK WHAT MSG IT IS (EID)
 	// SPLIT INTO 2 DIFF QUEUES (contactors, battery/orion)
 
+=======
+ 		 }
+ 	 }
+>>>>>>> dev
 }
 
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef * hfdcan, uint32_t RxFifo0ITs)

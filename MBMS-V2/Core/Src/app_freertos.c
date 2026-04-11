@@ -25,6 +25,14 @@
 #include "CAN.h"
 #include "can_rx.h"
 #include "can_tx.h"
+<<<<<<< HEAD
+=======
+#include "BatteryControlTask.h"
+#include "StartupTask.h"
+
+
+
+>>>>>>> dev
 
 /* USER CODE END Includes */
 
@@ -46,6 +54,17 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
 //Task Handles
+<<<<<<< HEAD
+=======
+
+osThreadId_t StartupTaskHandle;
+const osThreadAttr_t StartupTask_attributes = {
+	.name 		= "StartupTask",
+	.priority   = (osPriority_t) osPriorityNormal,
+    .stack_size = 256 * 4
+  };
+
+>>>>>>> dev
 osThreadId_t canTxTaskHandle;
 const osThreadAttr_t canTxTask_attributes = {
     .name       = "canTxTask",
@@ -88,18 +107,62 @@ const osMessageQueueAttr_t contactors_attributes = {
 	};
 
 osMessageQueueId_t BatteryQueueHandle;
+<<<<<<< HEAD
+const osMessageQueueAttr_t battery_attributes = {
+	  .name = "batteryQueue"
+	};
+=======
+
+
 const osMessageQueueAttr_t battery_attributes = {
 	  .name = "batteryQueue"
 	};
 
+//Mutex Handles
+osMutexId_t MBMSTripMutexHandle;
+const osMutexAttr_t MBMSTripMutex_attributes = {
+		.name = "MBMSTripMutex",
+		.attr_bits = osMutexPrioInherit,
+};
+
+osMutexId_t ContactorInfoMutexHandle;
+const osMutexAttr_t ContactorInfoMutex_attributes = {
+	  .name = "ContactorInfoMutex",
+      .attr_bits = osMutexPrioInherit,
+};
+
+osMutexId_t BatteryInfoMutexHandle;
+const osMutexAttr_t BatteryInfoMutex_attributes = {
+		.name = "BatteryInfoMutex",
+		.attr_bits = osMutexPrioInherit,
+};
+
+osMutexId_t MBMSStatusMutexHandle;
+const osMutexAttr_t MBMSStatusMutex_attributes = {
+		.name = "MBMSStatusMutex",
+		.attr_bits = osMutexPrioInherit,
+};
+
+osMutexId_t ContactorCommandMutexHandle;
+const osMutexAttr_t ContactorCommandMutex_attributes = {
+      .name = "ContactorCommandMutex",
+      .attr_bits = osMutexPrioInherit,
+};
+>>>>>>> dev
+
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
+
+
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
   .priority = (osPriority_t) osPriorityNormal,
   .stack_size = 128 * 4
 };
+
+
+
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -117,7 +180,13 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END Init */
 
   /* USER CODE BEGIN RTOS_MUTEX */
-  /* add mutexes, ... */
+
+	MBMSTripMutexHandle = osMutexNew(&MBMSTripMutex_attributes);
+	ContactorInfoMutexHandle = osMutexNew(&ContactorInfoMutex_attributes);
+	BatteryInfoMutexHandle = osMutexNew(&BatteryInfoMutex_attributes);
+	MBMSStatusMutexHandle = osMutexNew(&MBMSStatusMutex_attributes);
+	ContactorCommandMutexHandle = osMutexNew(&ContactorCommandMutex_attributes);
+
   /* USER CODE END RTOS_MUTEX */
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
@@ -130,7 +199,10 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_QUEUES */
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> dev
 	canTxQueueHandle = osMessageQueueNew(
 	    8,                     // max number of messages
 	    sizeof(CANmsg),        // size of each message
@@ -161,6 +233,10 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_THREADS */
 
+<<<<<<< HEAD
+=======
+  StartupTaskHandle = osThreadNew(StartupTask, NULL, &StartupTask_attributes);
+>>>>>>> dev
   canTxTaskHandle = osThreadNew(CAN_Tx_Task, NULL, &canTxTask_attributes);
   canRxTaskHandle = osThreadNew(CAN_Rx_Task, NULL, &canRxTask_attributes);
   //ContactorsTaskHandle = osThreadNew(ContactorsTask, NULL, &Contactors_attributes);
