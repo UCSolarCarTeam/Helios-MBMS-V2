@@ -67,6 +67,13 @@ extern osMessageQueueId_t canRxQueueHandle;
 extern osMessageQueueId_t ContactorQueueHandle;
 extern osMessageQueueId_t BatteryQueueHandle;
 
+extern osMutexId_t MBMSTripMutexHandle;
+extern osMutexId_t BatteryInfoMutexHandle;
+extern osMutexId_t ContactorInfoMutexHandle;
+extern osMutexId_t BatteryInfoMutexHandle;
+extern osMutexId_t ContactorCommandMutexHandle;
+extern osMutexId_t MBMSStatusMutexHandle;
+
 /* Exported function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
 

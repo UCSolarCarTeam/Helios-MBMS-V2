@@ -17,9 +17,22 @@
 #define HARD_MAX_TEMP 60
 #define HARD_MIN_TEMP 0
 
+<<<<<<< HEAD
+/* Current? */
+#define HARD_MAX_COMMON_CONTACTOR_CURRENT 	300
+#define HARD_MAX_MOTORS_CONTACTOR_CURRENT 	300
+#define HARD_MAX_ARRAY_CONTACTOR_CURRENT 	300
+#define HARD_MAX_LV_CONTACTOR_CURRENT 		300
+#define HARD_MAX_CHARGE_CONTACTOR_CURRENT  	300
+#define NO_CURRENT_THRESHOLD 				3 // (AMPS). So if less than this, consider no current, if more than this, consider there is current
+
+
+#define MINIMUM_ORION_MESSAGE_RECEIVED 5
+=======
 #define MPS_ACTIVE_LEVEL 1 // MPS CLOSED - have power
 #define ESD_ACTIVE_LEVEL 1 // ESD PRESSED - BPS
 #define DCDC1_ENABLE_LEVEL 1 // DCDC1 is enabled
+>>>>>>> 4bfb9aefd3d790d7e27f91310c70ece72f991738
 
 
 void BatteryControlTask(void* arg);
@@ -77,6 +90,7 @@ void Update_BatteryInfoStruct();
 void Update_DCDCStackStruct();
 void Update_TripStruct();
 void Update_SoftTripStruct();
+
 
 // Checking CCPS Alive Function
 void Check_ContactorHeartbeats();
