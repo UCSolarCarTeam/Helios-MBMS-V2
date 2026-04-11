@@ -37,6 +37,9 @@ uint32_t heartbeat_check_count = 0;
 uint16_t previousHeartbeats[NUM_OF_CNTR] = {0};
 heartbeatLastUpdatedTime[NUM_OF_CNTR] = {0};
 
+uint32_t pack_info_counter = 0;
+uint32_t temp_info_counter = 0;
+uint32_t cell_voltages_counter = 0;
 
 
 void MBMSStatus_init(void)
@@ -149,6 +152,7 @@ void enter_BOOT() {
 
 void enter_MPS_DISCONNECTED()
 {
+
 
 }
 
@@ -264,68 +268,6 @@ void startupCheck() // change after this function is done: waitForFirstHeartbeat
 
 
 
-//uint8_t waitForFirstHeartbeats() {
-//
-//
-//	static uint8_t heartbeatFailCounter[NUM_OF_CNTR] = {0};
-//	uint8_t dead = 0;
-//
-//
-//		for(int i = 0; i < NUM_OF_CNTR; i++) {
-//			heartbeat_check_count++;
-//			if (heartbeatFailCounter[i] > MAX_HEARTBEAT_FAILS){
-//
-//				switch (i) {
-//					case 0:
-//						mbmsHardTrips.LV_no_heartbeat_trip = 1;
-//						break;
-//					case 1:
-//						mbmsHardTrips.MT_no_heartbeat_trip = 1;
-//						break;
-//					case 2:
-//						mbmsHardTrips.AR_no_heartbeat_trip = 1;
-//						break;
-//					case 3:
-//						mbmsHardTrips.CHG_no_heartbeat_trip = 1;
-//						break;
-//				}
-//
-//				dead = 1;
-//				return dead;
-//
-//			}
-//			previousHeartbeats[i] = 0;
-//
-//			if (previousHeartbeats[i] >= 65535) { // check this logic lol
-//				previousHeartbeats[i] = 0;
-//			}
-//
-//			if(previousHeartbeats[i] >= contactorInfo[i].heartbeat){
-//				if(((osKernelGetTickCount() - heartbeatLastUpdatedTime[i])) > CONTACTOR_HEARTBEAT_TIMEOUT) { // where contactor_heartbeat_timeout is how often a heartbeat is sent out/recieved
-//					heartbeatFailCounter[i]++;
-//
-//				}
-//			}
-//			else {
-//				heartbeatLastUpdatedTime[i] = osKernelGetTickCount();
-//				heartbeatFailCounter[i] = 0;
-//			}
-//				previousHeartbeats[i] = (contactorInfo[i].heartbeat);
-//
-//			}
-//
-//
-//		}
-//		return dead;
-//    return 0;
-//
-//
-//
-//}
-
-
-
-
 
 uint8_t startupBatteryCheck()
 {
@@ -397,9 +339,34 @@ uint8_t checkContactorsOpen()
 
 /* ------ Main Control Functions ----- */
 
-void SystemStateMachine() {
+//void SystemStateMachine()
+//{
+//	// Make  is plugged in to stand in for the CAN msg
+//	uint8_t plugged = EVCC_12V_SW;
+//
+//	switch (carState)
+//	{
+//	case BOOT:
+//		//make sure these are the counters faisal used for updatEBATTERYINFO
+//		if((pack_info_counter >= MINIMUM_ORION_MESSAGE_RECEIVED ) && (temp_info_counter >= MINIMUM_ORION_MESSAGE_RECEIVED)
+//			&& (cell_voltages_counter >= MINIMUM_ORION_MESSAGE_RECEIVED))
+//		{
+//			carState = STARTUP;
+//		}
+//		break;
+//
+//
+//	case STARTUP:
+//
+//		// will go to BPS_FAULT state if startup checks do not pass
+//		StartupCheck(); //check faisal name is same
+//
+//		//checks MPS
+//		if(read_nMPS() == 1)
+//	}
+//}
 
-}
+
 
 
 void Control_Contactors()
