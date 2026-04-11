@@ -55,6 +55,17 @@ extern "C" {
 
 /* USER CODE END EM */
 extern osThreadId_t defaultTaskHandle;
+extern osThreadId_t StartupTaskHandle;
+extern osThreadId_t canTxTaskHandle;
+extern osThreadId_t canRxTaskHandle;
+extern osThreadId_t ContactorsTaskHandle;
+extern osThreadId_t BatteryTaskHandle;
+
+//Queue Handles
+extern osMessageQueueId_t canTxQueueHandle;
+extern osMessageQueueId_t canRxQueueHandle;
+extern osMessageQueueId_t ContactorQueueHandle;
+extern osMessageQueueId_t BatteryQueueHandle;
 
 /* Exported function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */

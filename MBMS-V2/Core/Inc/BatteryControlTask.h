@@ -17,6 +17,9 @@
 #define HARD_MAX_TEMP 60
 #define HARD_MIN_TEMP 0
 
+#define MPS_ACTIVE_LEVEL 1 // MPS CLOSED - have power
+#define ESD_ACTIVE_LEVEL 1 // ESD PRESSED - BPS
+#define DCDC1_ENABLE_LEVEL 1 // DCDC1 is enabled
 
 
 void BatteryControlTask(void* arg);

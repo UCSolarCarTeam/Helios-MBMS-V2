@@ -25,6 +25,9 @@
 #include "CAN.h"
 #include "can_rx.h"
 #include "can_tx.h"
+#include "BatteryControlTask.h"
+#include "StartupTask.h"
+
 
 /* USER CODE END Includes */
 
@@ -46,6 +49,14 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
 //Task Handles
+
+osThreadId_t StartupTaskHandle;
+const osThreadAttr_t StartupTask_attributes = {
+	.name 		= "StartupTask",
+	.priority   = (osPriority_t) osPriorityNormal,
+    .stack_size = 256 * 4
+  };
+
 osThreadId_t canTxTaskHandle;
 const osThreadAttr_t canTxTask_attributes = {
     .name       = "canTxTask",
@@ -161,6 +172,7 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_THREADS */
 
+  StartupTaskHandle = osThreadNew(StartupTask, NULL, &StartupTask_attributes);
   canTxTaskHandle = osThreadNew(CAN_Tx_Task, NULL, &canTxTask_attributes);
   canRxTaskHandle = osThreadNew(CAN_Rx_Task, NULL, &canRxTask_attributes);
   //ContactorsTaskHandle = osThreadNew(ContactorsTask, NULL, &Contactors_attributes);
