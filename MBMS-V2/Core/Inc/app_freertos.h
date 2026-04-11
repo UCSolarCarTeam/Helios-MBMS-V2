@@ -55,8 +55,6 @@ extern "C" {
 
 /* USER CODE END EM */
 extern osThreadId_t defaultTaskHandle;
-<<<<<<< HEAD
-=======
 extern osThreadId_t StartupTaskHandle;
 extern osThreadId_t canTxTaskHandle;
 extern osThreadId_t canRxTaskHandle;
@@ -64,13 +62,10 @@ extern osThreadId_t ContactorsTaskHandle;
 extern osThreadId_t BatteryTaskHandle;
 
 //Queue Handles
->>>>>>> dev
 extern osMessageQueueId_t canTxQueueHandle;
 extern osMessageQueueId_t canRxQueueHandle;
 extern osMessageQueueId_t ContactorQueueHandle;
 extern osMessageQueueId_t BatteryQueueHandle;
-<<<<<<< HEAD
-=======
 
 extern osMutexId_t MBMSTripMutexHandle;
 extern osMutexId_t BatteryInfoMutexHandle;
@@ -78,7 +73,6 @@ extern osMutexId_t ContactorInfoMutexHandle;
 extern osMutexId_t BatteryInfoMutexHandle;
 extern osMutexId_t ContactorCommandMutexHandle;
 extern osMutexId_t MBMSStatusMutexHandle;
->>>>>>> dev
 
 /* Exported function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */

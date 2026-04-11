@@ -67,7 +67,6 @@ typedef struct {
 	uint8_t faulted;
 } Permissions;
 
-<<<<<<< HEAD
 /*-------------------------------------*/
 // TO DO: please create structs for the rest of the things u need (such as MBMS status, DCDC stack, etc. below)
 
@@ -136,71 +135,11 @@ typedef struct {
     int8_t lowTemp;
     uint8_t avgTemp;
 
-=======
-
-typedef struct {
-	// pack info
-    float packCurrent; // current can be -ve, 2-bytes
-    float packVoltage; // 2-bytes
-    float packSOC; // state of charge, 1-byte
-    float packAmphours; // 2-bytes
-    float packDOD; // Depth of Discharge, 1-byte
-    // temperature info (each 1-byte)
-    uint8_t highTemp;
-    int8_t lowTemp;
-    uint8_t avgTemp;
->>>>>>> dev
     // Cell voltages
     float lowCellVoltage;
     uint8_t lowCellVoltageID;
     float highCellVoltage;
     uint8_t highCellVoltageID;
-<<<<<<< HEAD
-
-} BatteryInfo;
-
-typedef struct{
-	uint8_t auxilaryBattVoltage;
-	uint8_t strobeBMSLight;
-	uint8_t nChargeEnable;
-	uint8_t nChargeSafety;
-	uint8_t nDischargeEnable;
-	uint8_t orionCANReceived;
-	uint8_t dischargeShouldTrip;
-	uint8_t chargeShouldTrip;
-	uint8_t startupState;
-	uint8_t carState;
-}MBMSStatus;
-
-typedef struct {
-	uint8_t highCellVoltageTrip;
-	uint8_t lowCellVoltageTrip;
-	uint8_t commonHighCurrentTrip;
-	uint8_t motorHighCurrentTrip;
-	uint8_t arrayHighCurrentTrip;
-	uint8_t LVHighCurrentTrip;
-	uint8_t chargeHighCurrentTrip;
-	uint8_t protectionTrip;
-	uint8_t orionMessageTimeoutTrip;
-	uint8_t contactorDisconnectedUnexpectedlyTrip;
-	uint8_t contactorConnectedUnexpectedlyTrip;
-	uint8_t highBatteryTrip;
-	uint8_t commonHeartbeatDeadTrip;
-	uint8_t motorHeartbeatDeadTrip;
-	uint8_t arrayHeartbeatDeadTrip;
-	uint8_t LVHeartbeatDeadTrip;
-	uint8_t chargeHeartbeatDeadTrip;
-	uint8_t MPSDisabledTrip;
-	uint8_t ESDEnabledTrip;
-	uint8_t highTemperatureTrip;
-	uint8_t lowTemperatureTrip;
-
-} MBMSTrip;
-
-
-#endif /* INC_MBMS_H_ */
-
-=======
     // min max voltage info (each 2-bytes)
 //    uint16_t maxCellVoltage;
 //    uint16_t minCellVoltage;
@@ -310,4 +249,3 @@ typedef struct {
 
 
 #endif /* INC_MBMS_H_ */
->>>>>>> dev

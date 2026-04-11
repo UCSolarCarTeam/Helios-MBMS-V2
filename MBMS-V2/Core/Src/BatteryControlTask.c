@@ -32,12 +32,9 @@ BatteryInfo batteryInfo;
 MBMS_Hard_Trips mbmsHardTrips;
 MBMS_Soft_Trips mbmsSoftTrips;
 Permissions mbmsPermissions;
-<<<<<<< HEAD
 Contactor_CMND_t contactorcmd;
-=======
 DCDC_Stack dcdc_stack;
 
->>>>>>> 4bfb9aefd3d790d7e27f91310c70ece72f991738
 
 uint32_t heartbeat_check_count = 0;
 uint16_t previousHeartbeats[NUM_OF_CNTR] = {0};
@@ -273,8 +270,6 @@ void startupCheck() // change after this function is done: waitForFirstHeartbeat
 
 
 
-<<<<<<< HEAD
-=======
 // Add mutexs around shared variables
 uint8_t waitForFirstHeartbeats() {
 
@@ -339,7 +334,6 @@ uint8_t waitForFirstHeartbeats() {
 
 
 
->>>>>>> 4bfb9aefd3d790d7e27f91310c70ece72f991738
 
 
 uint8_t startupBatteryCheck()
@@ -667,8 +661,6 @@ void clear_SoftTrips()
 
 
 
-<<<<<<< HEAD
-=======
 
 
 
@@ -803,15 +795,6 @@ void Update_BatteryInfoStruct(void) // updating Orion / battery info struct
 }
 
 
-
-
-
-void SystemStateMachine(void)
-{
-    /* Stub: define later when state machine logic is ready */
-}
-
-
 }
 
 
@@ -827,4 +810,3 @@ void SystemStateMachine(void)
 
 
 
->>>>>>> 4bfb9aefd3d790d7e27f91310c70ece72f991738
