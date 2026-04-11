@@ -5,6 +5,7 @@
  *  Created on: Jan 24, 2026
  *      Author: m
  */
+#include <stdint.h>
 
 #ifndef INC_MBMS_H_
 #define INC_MBMS_H_
@@ -158,15 +159,15 @@ typedef struct
 
 typedef struct
 {
-	uint8_t Strobe_enable;
+	uint8_t BPS_Fault;
 	uint8_t charge_safety;
 	uint8_t discharge_enable;
 	uint8_t charge_enable;
 	uint8_t OBMS_CAN_RR;
 	uint8_t MPS;
 	uint8_t ESD;
-	uint8_t Abatt_enable;
-	uint8_t EVCC_connect;
+	uint8_t Abatt_EN;
+	uint8_t EVCC_12V_Sw;
 	uint8_t Startup_state;
 	uint8_t System_state;
 
@@ -179,7 +180,7 @@ typedef struct
 {
 	uint8_t DCDC1_en;
 	uint8_t _14V_Charge_EN;
-	uint8_t DCDC1_Fault;
+	uint8_t nDCDC_Fault;
 	uint8_t _12V_Critical_Fault;
 	uint8_t _14V_Charger_Fault;
 	uint8_t _12V_Critical_UC;
@@ -197,7 +198,7 @@ typedef struct
 	uint8_t MT_high_cur_trip;
 	uint8_t AR_high_cur_trip;
 	uint8_t CHG_high_cur_trip;
-	uint8_t Resverse_cur_trip;
+	uint8_t Reverse_cur_trip;
 	uint8_t OBMS_msg_timeout_trip;
 	uint8_t CNTR_disconnect_trip;
 	uint8_t CNTR_connect_trip;

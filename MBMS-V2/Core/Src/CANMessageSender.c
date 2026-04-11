@@ -9,7 +9,7 @@
 #include "MBMS.h"
 #include "CAN.h"
 #include "app_freertos.h"
-//#include "BatteryControlTask.h"
+#include "BatteryControlTask.h"
 //#include "StartupTask.h"
 
 // Shared status and info structs
@@ -32,9 +32,10 @@ extern ContactorInfo contactorInfo[6];
  */
 
 extern BatteryInfo batteryInfo;
-extern MBMSStatus mbmsStatus;
-extern MBMSTrip mbmsTrip;
-extern MBMSSoftBatteryLimitWarning mbmsSoftBatteryLimitWarning;
+extern MBMS_Status mbmsStatus;
+extern MBMS_Hard_Trips mbmsHardTrips;
+extern MBMS_Soft_Trips mbmsSoftTrips;
+extern DCDC_Stack dcdc_stack;
 
 // in ticks !
 uint32_t lastSentTime[NUM_CAN_MSG_TO_SEND] = {0};
@@ -110,12 +111,14 @@ void lastSentTime_init() {
 
 // complete/finish the below functions please ! (Please use good names for things !)
 
+
+// checked good
 void send_MBMSHeartbeat() {
 
 	// creating an instance of a CAN msg
 	CANmsg mbmsHeartbeatMsg;
 
-	mbmsHeartbeatMsg.data[0] 		= 0x01;
+	mbmsHeartbeatMsg.data[0] 		= 0x01; // just sending ones
 	mbmsHeartbeatMsg.DLC 			= 1;
 	mbmsHeartbeatMsg.extendedID 	= MBMS_HEARTBEAT_ID;
 	mbmsHeartbeatMsg.ID 			= 0x0;
@@ -124,32 +127,34 @@ void send_MBMSHeartbeat() {
 
 }
 
+// checked good
 void send_ContactorCommand() {
 
 	CANmsg contactorCommandMsg;
 	contactorCommandMsg.DLC			= 1;
 	contactorCommandMsg.extendedID	= CONTACTOR_COMMAND_ID;
 	contactorCommandMsg.ID			= 0x0;
-	contactorCommandMsg.data[0]		= ((contactorCommand.common & 0x01) << COMMON) 	+
+	contactorCommandMsg.data[0]		= ((contactorCommand.LV & 0x01) << LV)		+
 									  ((contactorCommand.motor & 0x01) << MOTOR) 	+
 									  ((contactorCommand.array & 0x01) << ARRAY)   	+
-									  ((contactorCommand.LV & 0x01) << LOWV)		+
 									  ((contactorCommand.charge & 0x01) << CHARGE);
 	osMessageQueuePut(canTxQueueHandle, &contactorCommandMsg, 0, osWaitForever);
 }
 
+// checked good
 void send_MBMSStatus() {
 	CANmsg mbmsStatusMsg;
-	uint16_t mbmsStatusData = ((mbmsStatus.auxilaryBattVoltage & 0x1f) << 0) + ((mbmsStatus.strobeBMSLight & 0x1) << 5)
-			+ ((mbmsStatus.nChargeEnable & 0x1) << 6)   				     + ((mbmsStatus.nChargeSafety & 0x1) << 7)
-			+ ((mbmsStatus.nDischargeEnable & 0x1) << 8)    				 + ((mbmsStatus.orionCANReceived & 0x1) << 9)
-			+ ((mbmsStatus.dischargeShouldTrip & 0x1) << 10) 				 + ((mbmsStatus.chargeShouldTrip & 0x1) << 11)
-			+ ((mbmsStatus.startupState & 0xf) << 12)						 + ((mbmsStatus.carState & 0x7) << 15);
+	uint16_t mbmsStatusData = ((mbmsStatus.BPS_Fault & 0x01) << 0) + ((mbmsStatus.charge_safety & 0x1) << 1)
+			+ ((mbmsStatus.discharge_enable & 0x1) << 2)   				     + ((mbmsStatus.charge_enable & 0x1) << 3)
+			+ ((mbmsStatus.OBMS_CAN_RR & 0x1) << 4)    				 + ((mbmsStatus.MPS & 0x1) << 5)
+			+ ((mbmsStatus.ESD & 0x1) << 6) 				 + ((mbmsStatus.Abatt_EN & 0x1) << 7)
+			+ ((mbmsStatus.EVCC_12V_Sw & 0x1) << 8)						 + ((mbmsStatus.Startup_state & 0xf) << 9)
+			+ ((mbmsStatus.System_state) << 13);
 
 	mbmsStatusMsg.data[0] = (mbmsStatusData & 0xff);
 	mbmsStatusMsg.data[1] = (mbmsStatusData & 0xff00) >> 8;
-	mbmsStatusMsg.data[2] = (mbmsStatusData & 0xff0000) >> 16;
-	mbmsStatusMsg.DLC = 3; // 3 bytes as of may 21 (added carState..)
+
+	mbmsStatusMsg.DLC = 2; // 3 bytes as of may 21 (added carState..)
 	mbmsStatusMsg.extendedID = MBMS_STATUS_ID;
 	mbmsStatusMsg.ID = 0x0;
 	osMessageQueuePut(canTxQueueHandle, &mbmsStatusMsg, 0, osWaitForever);
@@ -157,52 +162,50 @@ void send_MBMSStatus() {
 }
 
 
-
+// checked good
 void send_DCDCStack() {
-	CANmsg powSelectStatusMsg;
-uint16_t data = ((powerSelectionStatus.nMainPowerSwitch & 0x1) << 0) + ((powerSelectionStatus.ExternalShutdown & 0x1) << 1)
-		+ ((powerSelectionStatus.EN1 & 0x1) << 2) + ((powerSelectionStatus.nDCDC_Fault & 0x1) << 3)
-		+ ((powerSelectionStatus.n3A_OC & 0x1) << 4) + ((powerSelectionStatus.nDCDC_On & 0x1) << 5)
-		+ ((powerSelectionStatus.nCHG_Fault & 0x1) << 6) + ((powerSelectionStatus.nCHG_On & 0x1) << 7)
-		+ ((powerSelectionStatus.nCHG_LV_En & 0x1) << 8) + ((powerSelectionStatus.ABATT_Disable & 0x1) << 9)
-		+ ((powerSelectionStatus.Key & 0x1) << 10);
-powSelectStatusMsg.data[0] = (data & 0xff);
-powSelectStatusMsg.data[1] = (data & 0xff00) >> 8;
-powSelectStatusMsg.DLC = 2;
-powSelectStatusMsg.extendedID = POWER_SELECTION_STATUS_ID;
-powSelectStatusMsg.ID = 0x0;
-osMessageQueuePut(canTxQueueHandle, &powSelectStatusMsg, 0, osWaitForever);
+	CANmsg DCDCStackMsg;
+uint16_t data = ((dcdc_stack.DCDC1_en & 0x1) << 0) + ((dcdc_stack._14V_Charge_EN & 0x1) << 1)
+		+ ((dcdc_stack.nDCDC_Fault & 0x1) << 2) + ((dcdc_stack._12V_Critical_Fault & 0x1) << 3)
+		+ ((dcdc_stack._14V_Charger_Fault & 0x1) << 4) + ((dcdc_stack._12V_Critical_UC & 0x1) << 5);
+
+DCDCStackMsg.data[0] = (data & 0xff);
+DCDCStackMsg.DLC = 1;
+DCDCStackMsg.extendedID = DCDC_STACK_ID;
+DCDCStackMsg.ID = 0x0;
+osMessageQueuePut(canTxQueueHandle, &DCDCStackMsg, 0, osWaitForever);
 
 }
-void send_MBMSTrips() {
+
+// checked good
+void send_MBMSSoftTrips() {
 	CANmsg tripMsg;
-	uint16_t tripData = ((mbmsSoftBatteryLimitWarning.highCellVoltageWarning & 0x1) << 0)   	+ ((mbmsSoftBatteryLimitWarning.lowCellVoltageWarning & 0x1) << 1)
-			+ ((mbmsSoftBatteryLimitWarning.commonHighCurrentWarning & 0x1) << 2)   			+ ((mbmsSoftBatteryLimitWarning.motorHighCurrentWarning & 0x1) << 3)
-			+ ((mbmsSoftBatteryLimitWarning.arrayHighCurrentWarning & 0x1) << 4)    			+ ((mbmsSoftBatteryLimitWarning.LVHighCurrentWarning & 0x1) << 5)
-			+ ((mbmsSoftBatteryLimitWarning.chargeHighCurrentWarning & 0x1) << 6)   		    + ((mbmsSoftBatteryLimitWarning.highBatteryWarning & 0x1) << 7)
-		    + ((mbmsSoftBatteryLimitWarning.highTemperatureWarning & 0x1 << 8))		     	+ ((mbmsSoftBatteryLimitWarning.lowTemperatureWarning & 0x1 << 9));
+	uint16_t tripData = ((mbmsSoftTrips.High_volt_cell_Strip & 0x1) << 0)   	+ ((mbmsSoftTrips.Low_volt_cell_Strip & 0x1) << 1)
+			+ ((mbmsSoftTrips.CMN_high_cur_Strip & 0x1) << 2)   			+ ((mbmsSoftTrips.LV_high_cur_Strip & 0x1) << 3)
+			+ ((mbmsSoftTrips.MT_high_cur_Strip & 0x1) << 4)    			+ ((mbmsSoftTrips.AR_high_cur_Strip & 0x1) << 5)
+			+ ((mbmsSoftTrips.CHG_high_cur_Strip & 0x1) << 6)   		    + ((mbmsSoftTrips.High_temp_Strip & 0x1) << 7)
+		    + ((mbmsSoftTrips.Low_temp_Strip & 0x1 << 8));
 
 	tripMsg.data[0] = (tripData & 0xff);
 	tripMsg.data[1] = (tripData & 0xff00) >> 8;
 	tripMsg.DLC = 2; // 2 bytes
-	tripMsg.extendedID = MBMS_SOFT_BATTERY_LIMIT_WARNING_ID;
+	tripMsg.extendedID = MBMS_SOFT_TRIP_ID;
 	tripMsg.ID = 0x0;
 	osMessageQueuePut(canTxQueueHandle, &tripMsg, 0, osWaitForever);
 
-
-void send_MBMSSoftTrips() {
+//checked good
+void send_MBMSTrips() {
 	CANmsg tripMsg;
-	uint32_t tripData = ((mbmsTrip.highCellVoltageTrip & 0x1) << 0)   		  +	((mbmsTrip.lowCellVoltageTrip & 0x1) << 1)
-			+ ((mbmsTrip.commonHighCurrentTrip & 0x1) << 2)   			  + ((mbmsTrip.motorHighCurrentTrip & 0x1) << 3)
-			+ ((mbmsTrip.arrayHighCurrentTrip & 0x1) << 4)    			  + ((mbmsTrip.LVHighCurrentTrip & 0x1) << 5)
-			+ ((mbmsTrip.chargeHighCurrentTrip & 0x1) << 6)   			  + ((mbmsTrip.protectionTrip & 0x1) << 7)
-			+ ((mbmsTrip.orionMessageTimeoutTrip & 0x1) << 8) 			  + ((mbmsTrip.contactorDisconnectedUnexpectedlyTrip & 0x1) << 9)
-			+ ((mbmsTrip.contactorConnectedUnexpectedlyTrip & 0x1) << 10) + ((mbmsTrip.highBatteryTrip & 0x1) << 11)
-			+ ((mbmsTrip.commonHeartbeatDeadTrip & 0x1) << 12) 			  + ((mbmsTrip.motorHeartbeatDeadTrip & 0x1) << 13)
-			+ ((mbmsTrip.arrayHeartbeatDeadTrip & 0x1) << 14)			  + ((mbmsTrip.LVHeartbeatDeadTrip & 0x1) << 15)
-			+ ((mbmsTrip.chargeHeartbeatDeadTrip & 0x1) << 16)		      + ((mbmsTrip.MPSDisabledTrip & 0x1) << 17)
-			+ ((mbmsTrip.ESDEnabledTrip & 0x1) << 18)					  + ((mbmsTrip.highTemperatureTrip & 0x1 << 19))
-			+ ((mbmsTrip.lowTemperatureTrip & 0x1 << 20));
+	uint32_t tripData = ((mbmsHardTrips.High_volt_cell_trip & 0x1) << 0)   		  +	((mbmsHardTrips.Low_volt_cell_trip & 0x1) << 1)
+			+ ((mbmsHardTrips.CMN_high_cur_trip & 0x1) << 2)   			 	 + ((mbmsHardTrips.LV_high_cur_trip & 0x1) << 3)
+			+ ((mbmsHardTrips.MT_high_cur_trip & 0x1) << 4)    			 	 + ((mbmsHardTrips.AR_high_cur_trip & 0x1) << 5)
+			+ ((mbmsHardTrips.CHG_high_cur_trip & 0x1) << 6)   			  	+ ((mbmsHardTrips.Reverse_cur_trip & 0x1) << 7)
+			+ ((mbmsHardTrips.OBMS_msg_timeout_trip & 0x1) << 8) 			  + ((mbmsHardTrips.CNTR_disconnect_trip & 0x1) << 9)
+			+ ((mbmsHardTrips.CNTR_connect_trip & 0x1) << 10) 				+ ((mbmsHardTrips.CMN_no_heartbeat_trip & 0x1) << 11)
+			+ ((mbmsHardTrips.LV_no_heartbeat_trip & 0x1) << 12) 			  + ((mbmsHardTrips.MT_no_heartbeat_trip & 0x1) << 13)
+			+ ((mbmsHardTrips.AR_no_heartbeat_trip & 0x1) << 14)			  + ((mbmsHardTrips.CHG_no_heartbeat_trip & 0x1) << 15)
+			+ ((mbmsHardTrips.ESD_trip & 0x1) << 16)		      + ((mbmsHardTrips.High_temp_trip & 0x1) << 17)
+			+ ((mbmsHardTrips.Low_temp_trip & 0x1) << 18);
 
 	tripMsg.data[0] = (tripData & 0xff);
 	tripMsg.data[1] = (tripData & 0xff00) >> 8;

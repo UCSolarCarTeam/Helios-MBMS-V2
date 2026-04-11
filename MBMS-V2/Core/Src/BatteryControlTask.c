@@ -48,7 +48,7 @@ uint32_t cell_voltages_counter = 0;
 void MBMSStatus_init(void)
 {
     memset(&mbmsStatus, 0, sizeof(mbmsStatus));
-    mbmsStatus.Abatt_enable = 1;
+    mbmsStatus.Abatt_EN = 1;
 }
 
 
@@ -227,21 +227,6 @@ void Update_ContactorInfoStruct() {
     return;
 }
 
-
-// LATER TASKS //
-void Update_DCDCStackStruct(void)
-{
-    /* Stub: define later when DCDC stack struct logic is ready */
-}
-
-
-
-
-
-void Update_BatteryInfoStruct(void)
-{
-    /* Stub: define later when battery info update logic is ready */
-}
 
 
 /*-------------------------------------------*/
@@ -534,7 +519,7 @@ void Update_TripStruct()
 
 			if(contactorInfo[CHARGE].line_current > 0 || contactorInfo[LV].line_current < 0)
 			{
-				mbmsHardTrips.Resverse_cur_trip = 1;
+				mbmsHardTrips.Reverse_cur_trip = 1;
 				BPS_Fault = 1;
 			}
 
@@ -672,16 +657,15 @@ void clear_SoftTrips()
 // LATER TASKS //
 void Update_DCDCStackStruct(void) //update power selection struct
 {
-	// HELLO TEST TEST
+
 
 	dcdc_stack.DCDC1_en = DCDC1_EN();
 	dcdc_stack._14V_Charge_EN = _14V_Charge_EN();
-	dcdc_stack.DCDC1_Fault = nDCDC1_Fault();
+	dcdc_stack.nDCDC_Fault = nDCDC1_Fault();
 	dcdc_stack._12V_Critical_Fault = _12V_Critical_Fault();
 	dcdc_stack._14V_Charger_Fault = _14V_Charger_Fault();
 	dcdc_stack._12V_Critical_UC = _12V_Critical_UC();
 
-    /* Stub: define later when DCDC stack struct logic is ready */
 }
 
 
@@ -794,8 +778,6 @@ void Update_BatteryInfoStruct(void) // updating Orion / battery info struct
     }
 }
 
-
-}
 
 
 
