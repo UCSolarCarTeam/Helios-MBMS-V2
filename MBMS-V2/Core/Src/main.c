@@ -108,7 +108,7 @@ int main(void)
   MX_UART4_Init();
   MX_USB_PCD_Init();
   /* USER CODE BEGIN 2 */
-
+  CAN_Tx_Init();
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -213,14 +213,14 @@ static void MX_FDCAN1_Init(void)
   hfdcan1.Instance = FDCAN1;
   hfdcan1.Init.ClockDivider = FDCAN_CLOCK_DIV1;
   hfdcan1.Init.FrameFormat = FDCAN_FRAME_CLASSIC;
-  hfdcan1.Init.Mode = FDCAN_MODE_NORMAL;
+  hfdcan1.Init.Mode = FDCAN_MODE_INTERNAL_LOOPBACK;
   hfdcan1.Init.AutoRetransmission = DISABLE;
   hfdcan1.Init.TransmitPause = DISABLE;
   hfdcan1.Init.ProtocolException = DISABLE;
-  hfdcan1.Init.NominalPrescaler = 16;
+  hfdcan1.Init.NominalPrescaler = 5;
   hfdcan1.Init.NominalSyncJumpWidth = 1;
-  hfdcan1.Init.NominalTimeSeg1 = 1;
-  hfdcan1.Init.NominalTimeSeg2 = 1;
+  hfdcan1.Init.NominalTimeSeg1 = 7;
+  hfdcan1.Init.NominalTimeSeg2 = 2;
   hfdcan1.Init.DataPrescaler = 1;
   hfdcan1.Init.DataSyncJumpWidth = 1;
   hfdcan1.Init.DataTimeSeg1 = 1;
@@ -233,7 +233,59 @@ static void MX_FDCAN1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN FDCAN1_Init 2 */
+  FDCAN_FilterTypeDef packInfoFilter;
 
+  packInfoFilter.IdType 			= FDCAN_EXTENDED_ID; //used in canmsg
+  packInfoFilter.FilterIndex		= 0;
+  packInfoFilter.FilterType 		= FDCAN_FILTER_MASK;
+  packInfoFilter.FilterConfig	    = FDCAN_FILTER_TO_RXFIFO0;
+  packInfoFilter.FilterID1		    = PACK_INFO;
+  packInfoFilter.FilterID2			= 0x1FFFFFFF;
+//STM32H5 stores ID as a normal 11-bit or 29-bit number in FILTERID1/FILTERID2 so >>13/<<3 not needed
+
+  if(HAL_FDCAN_ConfigFilter(&hfdcan1, &packInfoFilter) != HAL_OK)
+  {
+	  Error_Handler();
+  }
+
+  FDCAN_FilterTypeDef tempInfoFilter;
+  tempInfoFilter.IdType 			= FDCAN_EXTENDED_ID; //used in canmsg
+  tempInfoFilter.FilterIndex		= 1;
+  tempInfoFilter.FilterType 		= FDCAN_FILTER_MASK;
+  tempInfoFilter.FilterConfig	    = FDCAN_FILTER_TO_RXFIFO0;
+  tempInfoFilter.FilterID1		    = TEMP_INFO;
+  tempInfoFilter.FilterID2			= 0x1FFFFFFF;
+
+  if(HAL_FDCAN_ConfigFilter(&hfdcan1, &tempInfoFilter) != HAL_OK)
+  {
+	  Error_Handler();
+  }
+
+  FDCAN_FilterTypeDef maxminVoltagedFilter;
+  maxminVoltagedFilter.IdType 			= FDCAN_EXTENDED_ID; //used in canmsg
+  maxminVoltagedFilter.FilterIndex		= 2;
+  maxminVoltagedFilter.FilterType 		= FDCAN_FILTER_MASK;
+  maxminVoltagedFilter.FilterConfig	    = FDCAN_FILTER_TO_RXFIFO0;
+  maxminVoltagedFilter.FilterID1		= MIN_MAX_VOLTAGES;
+  maxminVoltagedFilter.FilterID2	 	= 0x1FFFFFFF;
+
+  if(HAL_FDCAN_ConfigFilter(&hfdcan1, &maxminVoltagedFilter) != HAL_OK)
+  {
+	  Error_Handler();
+  }
+
+  FDCAN_FilterTypeDef contactorFilter;
+  contactorFilter.IdType 			= FDCAN_EXTENDED_ID; //used in canmsg
+  contactorFilter.FilterIndex		= 3;
+  contactorFilter.FilterType 		= FDCAN_FILTER_MASK;
+  contactorFilter.FilterConfig	    = FDCAN_FILTER_TO_RXFIFO0;
+  contactorFilter.FilterID1		    = CONTACTOR_ID;
+  contactorFilter.FilterID2	 	    = CONTACTOR_MASK;
+
+  if(HAL_FDCAN_ConfigFilter(&hfdcan1, &contactorFilter) != HAL_OK)
+  {
+	  Error_Handler();
+  }
   /* USER CODE END FDCAN1_Init 2 */
 
 }

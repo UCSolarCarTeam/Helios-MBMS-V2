@@ -25,11 +25,14 @@
 #include "CAN.h"
 #include "can_rx.h"
 #include "can_tx.h"
+<<<<<<< HEAD
+=======
 #include "BatteryControlTask.h"
 #include "StartupTask.h"
 
 
 
+>>>>>>> dev
 
 /* USER CODE END Includes */
 
@@ -51,6 +54,8 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
 //Task Handles
+<<<<<<< HEAD
+=======
 
 osThreadId_t StartupTaskHandle;
 const osThreadAttr_t StartupTask_attributes = {
@@ -59,6 +64,7 @@ const osThreadAttr_t StartupTask_attributes = {
     .stack_size = 256 * 4
   };
 
+>>>>>>> dev
 osThreadId_t canTxTaskHandle;
 const osThreadAttr_t canTxTask_attributes = {
     .name       = "canTxTask",
@@ -101,6 +107,11 @@ const osMessageQueueAttr_t contactors_attributes = {
 	};
 
 osMessageQueueId_t BatteryQueueHandle;
+<<<<<<< HEAD
+const osMessageQueueAttr_t battery_attributes = {
+	  .name = "batteryQueue"
+	};
+=======
 
 
 const osMessageQueueAttr_t battery_attributes = {
@@ -137,6 +148,7 @@ const osMutexAttr_t ContactorCommandMutex_attributes = {
       .name = "ContactorCommandMutex",
       .attr_bits = osMutexPrioInherit,
 };
+>>>>>>> dev
 
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
@@ -187,6 +199,10 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_QUEUES */
 
+<<<<<<< HEAD
+
+=======
+>>>>>>> dev
 	canTxQueueHandle = osMessageQueueNew(
 	    8,                     // max number of messages
 	    sizeof(CANmsg),        // size of each message
@@ -217,7 +233,10 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_THREADS */
 
+<<<<<<< HEAD
+=======
   StartupTaskHandle = osThreadNew(StartupTask, NULL, &StartupTask_attributes);
+>>>>>>> dev
   canTxTaskHandle = osThreadNew(CAN_Tx_Task, NULL, &canTxTask_attributes);
   canRxTaskHandle = osThreadNew(CAN_Rx_Task, NULL, &canRxTask_attributes);
   //ContactorsTaskHandle = osThreadNew(ContactorsTask, NULL, &Contactors_attributes);

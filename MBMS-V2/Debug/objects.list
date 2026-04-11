@@ -1,5 +1,9 @@
+<<<<<<< HEAD
+"./Core/Src/CANMessageSender.o"
+=======
 "./Core/Src/BatteryControlTask.o"
 "./Core/Src/StartupTask.o"
+>>>>>>> dev
 "./Core/Src/app_freertos.o"
 "./Core/Src/can_rx.o"
 "./Core/Src/can_tx.o"
@@ -19,17 +23,23 @@
 "./Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_flash.o"
 "./Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_flash_ex.o"
 "./Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_gpio.o"
+<<<<<<< HEAD
+=======
 "./Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_pcd.o"
 "./Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_pcd_ex.o"
+>>>>>>> dev
 "./Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_pwr.o"
 "./Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_pwr_ex.o"
 "./Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_rcc.o"
 "./Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_rcc_ex.o"
+<<<<<<< HEAD
+=======
 "./Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_spi.o"
 "./Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_spi_ex.o"
 "./Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_uart.o"
 "./Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_hal_uart_ex.o"
 "./Drivers/STM32H5xx_HAL_Driver/Src/stm32h5xx_ll_usb.o"
+>>>>>>> dev
 "./Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.o"
 "./Middlewares/Third_Party/FreeRTOS/Source/croutine.o"
 "./Middlewares/Third_Party/FreeRTOS/Source/event_groups.o"

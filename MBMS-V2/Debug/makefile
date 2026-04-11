@@ -68,9 +68,14 @@ main-build: Helios-MBMS-V2.elf secondary-outputs
 Helios-MBMS-V2.elf Helios-MBMS-V2.map: $(OBJS) $(USER_OBJS) C:\workspace\solarcar\mbms\Helios-MBMS-V2\MBMS-V2\STM32H563VITX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	arm-none-eabi-gcc -o "Helios-MBMS-V2.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m33 -T"C:\workspace\solarcar\mbms\Helios-MBMS-V2\MBMS-V2\STM32H563VITX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Helios-MBMS-V2.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv5-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 =======
+<<<<<<< HEAD
+Helios-MBMS-V2.elf Helios-MBMS-V2.map: $(OBJS) $(USER_OBJS) C:\workspace\solarcar\mbms\Helios-MBMS-V2\MBMS-V2\STM32H563VITX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "Helios-MBMS-V2.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m33 -T"C:\workspace\solarcar\mbms\Helios-MBMS-V2\MBMS-V2\STM32H563VITX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Helios-MBMS-V2.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv5-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+=======
 Helios-MBMS-V2.elf Helios-MBMS-V2.map: $(OBJS) $(USER_OBJS) /Users/m/Desktop/ucSolarCar/BMS/Helios-MBMS-V2/MBMS-V2/STM32H563VITX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	arm-none-eabi-gcc -o "Helios-MBMS-V2.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m33 -T"/Users/m/Desktop/ucSolarCar/BMS/Helios-MBMS-V2/MBMS-V2/STM32H563VITX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Helios-MBMS-V2.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv5-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 >>>>>>> 4bfb9aefd3d790d7e27f91310c70ece72f991738
+>>>>>>> dev
 	@echo 'Finished building target: $@'
 	@echo ' '
 
