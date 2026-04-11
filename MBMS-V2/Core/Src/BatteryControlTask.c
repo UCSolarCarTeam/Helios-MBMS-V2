@@ -16,6 +16,7 @@
 
 
 extern osMessageQueueId_t ContactorQueueHandle; // Used GPT for this
+extern osMessageQueueId_t BatteryInfoQueueHandle; // Used GPT for this
 
 uint32_t BCT_start_tick = 0;
 uint32_t BCT_end_tick = 0;
@@ -31,7 +32,12 @@ BatteryInfo batteryInfo;
 MBMS_Hard_Trips mbmsHardTrips;
 MBMS_Soft_Trips mbmsSoftTrips;
 Permissions mbmsPermissions;
+<<<<<<< HEAD
 Contactor_CMND_t contactorcmd;
+=======
+DCDC_Stack dcdc_stack;
+
+>>>>>>> 4bfb9aefd3d790d7e27f91310c70ece72f991738
 
 uint32_t heartbeat_check_count = 0;
 uint16_t previousHeartbeats[NUM_OF_CNTR] = {0};
@@ -246,7 +252,7 @@ void Update_BatteryInfoStruct(void)
 void startupCheck() // change after this function is done: waitForFirstHeartbeats
 {
     /* Run startup gate checks in order. If any fail, enter fault. */
-    if (!waitForFirstHeartbeats())
+    if (waitForFirstHeartbeats())
     {
         enter_BPS_FAULT();   // preferred name from your header
         return;
@@ -267,6 +273,73 @@ void startupCheck() // change after this function is done: waitForFirstHeartbeat
 
 
 
+<<<<<<< HEAD
+=======
+// Add mutexs around shared variables
+uint8_t waitForFirstHeartbeats() {
+
+
+	static uint8_t heartbeatFailCounter[NUM_OF_CNTR] = {0};
+	uint8_t dead = 0;
+
+
+		for(int i = 0; i < NUM_OF_CNTR; i++) {
+			heartbeat_check_count++;
+			// case that a ccp heartbeat has died
+			if (heartbeatFailCounter[i] > MAX_HEARTBEAT_FAILS) {
+				// from enum
+				switch (i) {
+					case LV:
+						mbmsHardTrips.LV_no_heartbeat_trip = 1;
+						break;
+					case MOTOR:
+						mbmsHardTrips.MT_no_heartbeat_trip = 1;
+						break;
+					case ARRAY:
+						mbmsHardTrips.AR_no_heartbeat_trip = 1;
+						break;
+					case CHARGE:
+						mbmsHardTrips.CHG_no_heartbeat_trip = 1;
+						break;
+				}
+
+				dead = 1;
+				return dead;
+			}
+
+			// case that the heartbeat has reached max value
+			if (previousHeartbeats[i] >= 65535) { // check this logic lol
+				previousHeartbeats[i] = 0;
+			}
+
+			// case that heartbeat update has timed out
+			// This checks whether the heartbeat did not increase.
+			if(previousHeartbeats[i] >= contactorInfo[i].heartbeat){
+				// If the heartbeat hasn't changed for too long, the system assumes it may have stalled.
+				if(((osKernelGetTickCount() - heartbeatLastUpdatedTime[i])) > CONTACTOR_HEARTBEAT_TIMEOUT) { // where contactor_heartbeat_timeout is how often a heartbeat is sent out/recieved
+					// The failure counter increases.
+					heartbeatFailCounter[i]++;
+
+				}
+			}
+			// If the heartbeat did increase, the controller is alive. (Updates the last heartbeat time, Resets the failure counter, Stores the new heartbeat value)
+			else {
+				heartbeatLastUpdatedTime[i] = osKernelGetTickCount();
+				heartbeatFailCounter[i] = 0;
+				previousHeartbeats[i] = (contactorInfo[i].heartbeat); // moved here from out of elae block - march 14
+			}
+
+			//previousHeartbeats[i] = (contactorInfo[i].heartbeat);
+
+		}
+
+	return dead;
+
+}
+
+
+
+>>>>>>> 4bfb9aefd3d790d7e27f91310c70ece72f991738
 
 
 uint8_t startupBatteryCheck()
@@ -307,15 +380,17 @@ uint8_t startupBatteryCheck()
 
 uint8_t checkPrechargersOpen()
 {
+	uint8_t pass = 1;
     for (int i = 0; i < NUM_OF_CNTR; i++)
     {
         /* If the precharger is reported closed, then it is NOT open. */
         if (contactorInfo[i].precharge_close == CLOSE_CONTACTOR)
         {
-            return 0;
+            pass = 0;
+            return pass;
         }
     }
-    return 1;
+    return pass;
 }
 
 
@@ -324,14 +399,16 @@ uint8_t checkPrechargersOpen()
 
 uint8_t checkContactorsOpen()
 {
+	uint8_t pass = 1;
     for (int i = 0; i < NUM_OF_CNTR; i++)
     {
         if (contactorInfo[i].contactor_close == CLOSE_CONTACTOR)
         {
-            return 0;
+        	pass = 0;
+            return pass;
         }
     }
-    return 1;
+    return pass;
 }
 
 
@@ -590,3 +667,164 @@ void clear_SoftTrips()
 
 
 
+<<<<<<< HEAD
+=======
+
+
+
+
+
+
+
+
+// LATER TASKS //
+void Update_DCDCStackStruct(void) //update power selection struct
+{
+	// HELLO TEST TEST
+
+	dcdc_stack.DCDC1_en = DCDC1_EN();
+	dcdc_stack._14V_Charge_EN = _14V_Charge_EN();
+	dcdc_stack.DCDC1_Fault = nDCDC1_Fault();
+	dcdc_stack._12V_Critical_Fault = _12V_Critical_Fault();
+	dcdc_stack._14V_Charger_Fault = _14V_Charger_Fault();
+	dcdc_stack._12V_Critical_UC = _12V_Critical_UC();
+
+    /* Stub: define later when DCDC stack struct logic is ready */
+}
+
+
+
+
+
+// This function reads battery-related CAN messages from a queue
+// and updates the batteryInfo struct accordingly
+void Update_BatteryInfoStruct(void) // updating Orion / battery info struct
+{
+    CANmsg batteryMsg;  // Variable to store incoming CAN message
+
+    // Keeps track of how many cycles we have NOT received a message
+    static uint8_t BatteryInfoStruct_MessageCounter = 0;
+
+    // Try to get a message from the queue
+    osStatus_t status = osMessageQueueGet(BatteryInfoQueueHandle, &batteryMsg, NULL, 0);
+
+    // If a message was successfully received
+    if (status == osOK)
+    {
+        // Reset timeout counter since we got a message
+        BatteryInfoStruct_MessageCounter = 0;
+
+        // Indicate CAN communication is healthy
+        mbmsStatus.OBMS_CAN_RR = 1;
+
+        // Clear timeout fault
+        mbmsHardTrips.OBMS_msg_timeout_trip = 0;
+
+        // Pointer to the raw data bytes in the CAN message
+        uint8_t *data = batteryMsg.data;
+
+        // Check if this message contains pack-level information
+        if (batteryMsg.extendedID == PACK_INFO)
+        {
+            // Ensure message has enough bytes
+            if (batteryMsg.DLC >= 8) // ?? its ok -m
+            {
+                // Extract pack current (2 bytes, scaled by 10)
+                batteryInfo.packCurrent  = (float)((uint16_t)(data[0] | (data[1] << 8))) / 10.0f;
+
+                // Extract pack voltage (2 bytes, scaled by 10)
+                batteryInfo.packVoltage  = (float)((uint16_t)(data[2] | (data[3] << 8))) / 10.0f;
+
+                // Extract state of charge (1 byte, scaled by 2)
+                batteryInfo.packSOC      = (float)(data[4]) / 2.0f;
+
+                // Extract amp-hours (2 bytes, scaled by 10)
+                batteryInfo.packAmphours = (float)((uint16_t)(data[5] | (data[6] << 8))) / 10.0f;
+
+                // Extract depth of discharge (1 byte, scaled by 2)
+                batteryInfo.packDOD      = (float)(data[7]) / 2.0f;
+            }
+        }
+
+        // Check if this message contains temperature data
+        else if (batteryMsg.extendedID == TEMP_INFO)
+        {
+            // Ensure message has enough bytes
+            if (batteryMsg.DLC >= 5)
+            {
+                // Highest temperature in pack
+                batteryInfo.highTemp = data[0];
+
+                // Lowest temperature (cast to signed value)
+                batteryInfo.lowTemp  = (int8_t)data[2];
+
+                // Average temperature
+                batteryInfo.avgTemp  = data[4];
+            }
+        }
+
+        // Check if this message contains cell voltage data
+        else if (batteryMsg.extendedID == CELL_VOLTAGES)
+        {
+            // Ensure message has enough bytes
+            if (batteryMsg.DLC >= 6) // check also
+            {
+                // Lowest cell voltage (2 bytes, scaled by 10000)
+                batteryInfo.lowCellVoltage    = (float)((uint16_t)(data[0] | (data[1] << 8))) / 10000.0f;
+
+                // ID/index of lowest voltage cell
+                batteryInfo.lowCellVoltageID  = data[2];
+
+                // Highest cell voltage (2 bytes, scaled by 10000)
+                batteryInfo.highCellVoltage   = (float)((uint16_t)(data[3] | (data[4] << 8))) / 10000.0f;
+
+                // ID/index of highest voltage cell
+                batteryInfo.highCellVoltageID = data[5];
+            }
+        }
+
+        // Other message types (STARTUP_INFO, ERRORS, etc.) are not handled yet
+    }
+    else
+    {
+        // No message received → increment timeout counter
+        BatteryInfoStruct_MessageCounter++; // this is bad
+    }
+
+    // If we missed too many messages in a row (timeout condition)
+    if (BatteryInfoStruct_MessageCounter >= 21) // check
+    {
+        // Mark CAN communication as lost
+        mbmsStatus.OBMS_CAN_RR = 0;
+
+        // Trigger a fault/trip due to message timeout
+        mbmsHardTrips.OBMS_msg_timeout_trip = 1;
+    }
+}
+
+
+
+
+
+void SystemStateMachine(void)
+{
+    /* Stub: define later when state machine logic is ready */
+}
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+>>>>>>> 4bfb9aefd3d790d7e27f91310c70ece72f991738

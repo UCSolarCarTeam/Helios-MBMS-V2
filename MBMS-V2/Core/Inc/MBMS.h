@@ -20,6 +20,13 @@
 #define CONTACTOR_HEARTBEAT_TIMEOUT 1500 // milliseconds
 #define MAX_HEARTBEAT_FAILS 3
 
+#define DCDC1_en()							 HAL_GPIO_ReadPin(DCDC1_EN_GPIO_Port, DCDC1_EN_Pin);
+#define	_14V_Charge_EN()				     HAL_GPIO_ReadPin(Charge_Enable_GPIO_Port, Charge_Enable_Pin);
+#define	DCDC1_Fault()	    			 	 HAL_GPIO_ReadPin(DCDC1_Fault_GPIO_Port, DCDC1_Fault_Pin);
+#define	_12V_Critical_Fault() 				 HAL_GPIO_ReadPin(_12V_Critical_UC_GPIO_Port,_12V_Critical_UC_Pin);
+#define	_14V_Charger_Fault() 				 HAL_GPIO_ReadPin(_14V_Charger_Fault_GPIO_Port, _14V_Charger_Fault_Pin);
+#define	_12V_Critical_UC()					 HAL_GPIO_ReadPin(_12V_Critical_UC_GPIO_Port, _12V_Critical_UC_Pin);
+
 /* Enums */
 //typedef enum // match with the proper CAN ID's
 //{
@@ -112,11 +119,11 @@ typedef struct
 typedef struct
 {
 	uint8_t DCDC1_en;
-	uint8_t MBMS_charge_12V_enable;
-	uint8_t DCDC1_fault;
-	uint8_t critical_fault;
-	uint8_t charger_fault;
-	uint8_t critical_OC;
+	uint8_t _14V_Charge_EN;
+	uint8_t DCDC1_Fault;
+	uint8_t _12V_Critical_Fault;
+	uint8_t _14V_Charger_Fault;
+	uint8_t _12V_Critical_UC;
 } DCDC_Stack;
 
 

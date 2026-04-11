@@ -65,10 +65,10 @@ void Error_Handler(void);
 #define DEBUG_UART4_TX_GPIO_Port GPIOA
 #define DEBUG_UART4_RX_Pin GPIO_PIN_1
 #define DEBUG_UART4_RX_GPIO_Port GPIOA
-#define DCDC1_Fault_Pin GPIO_PIN_2
-#define DCDC1_Fault_GPIO_Port GPIOB
-#define nDCDC_Fault_Pin GPIO_PIN_7
-#define nDCDC_Fault_GPIO_Port GPIOE
+#define nDCDC_Fault_Pin GPIO_PIN_2
+#define nDCDC_Fault_GPIO_Port GPIOB
+#define _12V_Critical_Fault_Pin GPIO_PIN_7
+#define _12V_Critical_Fault_GPIO_Port GPIOE
 #define _14V_Charger_Fault_Pin GPIO_PIN_8
 #define _14V_Charger_Fault_GPIO_Port GPIOE
 #define _12V_Critical_UC_Pin GPIO_PIN_9
@@ -79,8 +79,8 @@ void Error_Handler(void);
 #define _12V_CAN_State_GPIO_Port GPIOC
 #define _12V_CAN_PCHG_Pin GPIO_PIN_7
 #define _12V_CAN_PCHG_GPIO_Port GPIOC
-#define Strobe_EN_Pin GPIO_PIN_9
-#define Strobe_EN_GPIO_Port GPIOC
+#define BPS_Fault_Pin GPIO_PIN_9
+#define BPS_Fault_GPIO_Port GPIOC
 #define _14V_Charge_EN_Pin GPIO_PIN_8
 #define _14V_Charge_EN_GPIO_Port GPIOA
 #define Abatt_EN_Pin GPIO_PIN_9
@@ -97,10 +97,8 @@ void Error_Handler(void);
 #define Common_CNTR_Aux_GPIO_Port GPIOB
 #define Main_CNTR_Aux_Pin GPIO_PIN_7
 #define Main_CNTR_Aux_GPIO_Port GPIOB
-#define _12V_CAN_Pin GPIO_PIN_9
-#define _12V_CAN_GPIO_Port GPIOB
-#define _12V_Critical_Pin GPIO_PIN_0
-#define _12V_Critical_GPIO_Port GPIOE
+#define _12V_CAN_EN_Pin GPIO_PIN_9
+#define _12V_CAN_EN_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 
