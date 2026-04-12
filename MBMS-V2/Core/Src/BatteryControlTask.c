@@ -143,8 +143,22 @@ void enter_BOOT() {
     BCT_difference_tick = 0;
     BCT_difference_seconds = 0;
 
-    /* 6. Reset internal BCT counter */
+    /* 6. Reset Counters */
     BCT_Counter = 0;
+
+	startup_Check_Counter = 0;
+
+	pack_info_counter = 0;
+	temp_info_counter = 0;
+	cell_voltages_counter = 0;
+
+	/* 7. Reset Heartbeats */
+	for(int i = 0; i < NUM_OF_CNTR; i++) {
+		previousHeartbeats[i] = 0;
+		heartbeatLastUpdatedTime[i] = 0;
+		contactorInfo[i].heartbeat = 0;
+	}
+
 }
 
 void enter_MPS_DISCONNECTED()
@@ -205,55 +219,56 @@ uint8_t waitForFirstHeartbeats() {
 	uint8_t dead = 0;
 
 
-		for(int i = 0; i < NUM_OF_CNTR; i++) {
-			heartbeat_check_count++;
-			// case that a ccp heartbeat has died
-			if (heartbeatFailCounter[i] > MAX_HEARTBEAT_FAILS) {
-				// from enum
-				switch (i) {
-					case LV:
-						mbmsHardTrips.LV_no_heartbeat_trip = 1;
-						break;
-					case MOTOR:
-						mbmsHardTrips.MT_no_heartbeat_trip = 1;
-						break;
-					case ARRAY:
-						mbmsHardTrips.AR_no_heartbeat_trip = 1;
-						break;
-					case CHARGE:
-						mbmsHardTrips.CHG_no_heartbeat_trip = 1;
-						break;
-				}
+	for(int i = 0; i < NUM_OF_CNTR; i++) {
 
-				dead = 1;
-				return dead;
+		heartbeat_check_count++;
+
+		// case that a ccp heartbeat has died
+		if (heartbeatFailCounter[i] > MAX_HEARTBEAT_FAILS) {
+			// from enum
+			switch (i) {
+				case LV:
+					mbmsHardTrips.LV_no_heartbeat_trip = 1;
+					break;
+				case MOTOR:
+					mbmsHardTrips.MT_no_heartbeat_trip = 1;
+					break;
+				case ARRAY:
+					mbmsHardTrips.AR_no_heartbeat_trip = 1;
+					break;
+				case CHARGE:
+					mbmsHardTrips.CHG_no_heartbeat_trip = 1;
+					break;
 			}
 
-			// case that the heartbeat has reached max value
-			if (previousHeartbeats[i] >= 65535) { // check this logic lol
-				previousHeartbeats[i] = 0;
-			}
-
-			// case that heartbeat update has timed out
-			// This checks whether the heartbeat did not increase.
-			if(previousHeartbeats[i] >= contactorInfo[i].heartbeat){
-				// If the heartbeat hasn't changed for too long, the system assumes it may have stalled.
-				if(((osKernelGetTickCount() - heartbeatLastUpdatedTime[i])) > CONTACTOR_HEARTBEAT_TIMEOUT) { // where contactor_heartbeat_timeout is how often a heartbeat is sent out/recieved
-					// The failure counter increases.
-					heartbeatFailCounter[i]++;
-
-				}
-			}
-			// If the heartbeat did increase, the controller is alive. (Updates the last heartbeat time, Resets the failure counter, Stores the new heartbeat value)
-			else {
-				heartbeatLastUpdatedTime[i] = osKernelGetTickCount();
-				heartbeatFailCounter[i] = 0;
-				previousHeartbeats[i] = (contactorInfo[i].heartbeat); // moved here from out of elae block - march 14
-			}
-
-			//previousHeartbeats[i] = (contactorInfo[i].heartbeat);
-
+			dead = 1;
+			return dead;
 		}
+
+		// case that the heartbeat has reached max value
+		if (previousHeartbeats[i] >= 65535) { // check this logic lol
+			previousHeartbeats[i] = 0;
+		}
+
+		// case that heartbeat update has timed out
+		// This checks whether the heartbeat did not increase.
+		if(previousHeartbeats[i] >= contactorInfo[i].heartbeat){
+			// If the heartbeat hasn't changed for too long, the system assumes it may have stalled.
+			if(((osKernelGetTickCount() - heartbeatLastUpdatedTime[i])) > CONTACTOR_HEARTBEAT_TIMEOUT) { // where contactor_heartbeat_timeout is how often a heartbeat is sent out/recieved
+				// The failure counter increases.
+				heartbeatFailCounter[i]++;
+
+			}
+		}
+		// If the heartbeat did increase, the controller is alive. (Updates the last heartbeat time, Resets the failure counter, Stores the new heartbeat value)
+		else {
+			heartbeatLastUpdatedTime[i] = osKernelGetTickCount();
+			heartbeatFailCounter[i] = 0;
+			previousHeartbeats[i] = (contactorInfo[i].heartbeat);
+		}
+
+
+	}
 
 	return dead;
 

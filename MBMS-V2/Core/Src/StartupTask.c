@@ -11,7 +11,7 @@
 #include "cmsis_os.h"
 #include <stdbool.h>
 #include <stdint.h>
-#include "app_freertos.h"
+
 
 
 
@@ -38,6 +38,7 @@ extern Permissions mbmsPermissions;
 
 extern uint32_t startup_Check_Counter;
 
+static uint8_t startUpChecksComplete = 0;
 
 /* ============================== HELPER FUNCTIONS ============================ */
 
@@ -164,22 +165,25 @@ static void Startup_Flowchart(void)
 
     /* -------------------------------------------------------------------------
      * Enable DCDC1 (Aux -> Main battery switching)
-     * - Only compiles if GPIO macros exist
      * - Then updates state to record DCDC1 enabled
      * ------------------------------------------------------------------------- */
-#if defined(DCDC1_EN_GPIO_Port) && defined(DCDC1_EN_Pin) /* Change #2*/
     HAL_GPIO_WritePin(DCDC1_EN_GPIO_Port, DCDC1_EN_Pin, DCDC1_ENABLE_LEVEL);
-#endif
+
     mbmsStatus.Startup_state = STARTUP_DCDC1_ON;
 
     /* -------------------------------------------------------------------------
      * Enable 12V CAN / front-of-car system power
-     * - Only compiles if GPIO macros exist
      * - Updates state to record CAN12V enable step
      * ------------------------------------------------------------------------- */
-#if defined(_12V_CAN_EN_GPIO_Port) && defined(_12V_CAN_EN_Pin)
+
+    // we are precharging here btw !!!!!
+    HAL_GPIO_WritePin(_12V_CAN_PCHG_GPIO_Port, _12V_CAN_PCHG_Pin, _12V_CAN_PCHG_ACTIVE);
+    while (read_12V_CAN_State() != _12V_CAN_STATE_ACTIVE) {
+    	osDelay(POLL_DELAY_MS);
+    }
     HAL_GPIO_WritePin(_12V_CAN_EN_GPIO_Port, _12V_CAN_EN_Pin, _12V_CAN_EN_ACTIVE);
-#endif
+    HAL_GPIO_WritePin(_12V_CAN_PCHG_GPIO_Port, _12V_CAN_PCHG_Pin, !(_12V_CAN_PCHG_ACTIVE));
+
     mbmsStatus.Startup_state = STARTUP_12V_CAN_ON;  /* state added for visibility */
 
     /* Permissions: Motor contactor */

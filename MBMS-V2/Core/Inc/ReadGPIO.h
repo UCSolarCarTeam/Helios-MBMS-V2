@@ -9,6 +9,7 @@
 #define INC_READGPIO_H_
 
 #include "cmsis_os.h"
+#include "app_freertos.h"
 #include "main.h"
 
 
@@ -17,6 +18,8 @@
 #define ESD_ACTIVE 1
 
 #define _12V_CAN_EN_ACTIVE 1
+#define _12V_CAN_PCHG_ACTIVE 1
+#define _12V_CAN_STATE_ACTIVE 1
 
 // from OBMS
 #define DISCHARGE_ENABLE_ACTIVE 1
@@ -44,5 +47,6 @@
 #define read_Main_CNTR_Aux()					 HAL_GPIO_ReadPin(Main_CNTR_Aux_GPIO_Port, Main_CNTR_Aux_Pin)
 #define read_Common_CNTR_Aux()					 HAL_GPIO_ReadPin(Common_CNTR_Aux_GPIO_Port, Common_CNTR_Aux_Pin)
 
+#define read_12V_CAN_State()					 HAL_GPIO_ReadPin(_12V_CAN_State_GPIO_Port, _12V_CAN_State_Pin)
 
 #endif /* INC_READGPIO_H_ */
