@@ -5,18 +5,13 @@
 #include "CAN.h"
 //#include "StartupTask.h"
 //#include "ShutoffTask.h"
-//#include "ReadPowerGPIO.h"
+#include "ReadGPIO.h"
 //#include "CANMessageSenderTask.h"
 #include "MBMS.h"
 #include "main.h"
 #include <string.h>
 #include <stdbool.h>
 #include <app_freertos.h>
-
-
-
-extern osMessageQueueId_t ContactorQueueHandle; // Used GPT for this
-extern osMessageQueueId_t BatteryInfoQueueHandle; // Used GPT for this
 
 uint32_t BCT_start_tick = 0;
 uint32_t BCT_end_tick = 0;
@@ -38,7 +33,7 @@ DCDC_Stack dcdc_stack;
 
 uint32_t heartbeat_check_count = 0;
 uint16_t previousHeartbeats[NUM_OF_CNTR] = {0};
-heartbeatLastUpdatedTime[NUM_OF_CNTR] = {0};
+uint32_t heartbeatLastUpdatedTime[NUM_OF_CNTR] = {0}; // check datatype..
 
 uint32_t pack_info_counter = 0;
 uint32_t temp_info_counter = 0;
@@ -125,6 +120,8 @@ void BatteryControl() {
 }
 
 
+/* ------ System State Switching Functions ------ */
+
 void enter_BOOT() {
 
     /* 1. Set system state to BOOT */
@@ -150,9 +147,6 @@ void enter_BOOT() {
     BCT_Counter = 0;
 }
 
-
-/* ------ System State Switching Functions ------ */
-
 void enter_MPS_DISCONNECTED()
 {
 
@@ -173,58 +167,6 @@ void enter_CHARGING() {
 
 void enter_FULLY_OPERATIONAL() {
 
-}
-
-
-/* ------ Updating Information Functions ------ */
-
-void Update_ContactorInfoStruct() {
-	CANmsg contactorMsg;
-
-    osStatus_t status = osMessageQueueGet(ContactorQueueHandle, &contactorMsg, NULL, 0); // Take from que and put into struct
-    if (status != osOK) {
-        return; // no new message
-    }
-    // defines are in CAN.h for mask and ID
-    uint32_t extID = contactorMsg.extendedID;
-
-    // if the msg is a contactor info msg
-    if ((extID & CNTR_MSG_MASK) == CONTACTOR_ID){
-    	uint8_t contactor_idx = extID - CONTACTOR_ID;
-
-    	uint8_t *data = contactorMsg.data;
-
-		uint8_t 	prechargerClosed   		= (data[0] >> 0) & 0x1;
-		uint8_t 	prechargerClosing  		= (data[0] >> 1) & 0x1;
-		uint8_t 	prechargerError    		= (data[0] >> 2) & 0x1;
-		uint8_t 	contactorClosed    		= (data[0] >> 3) & 0x1;
-		uint8_t 	contactorClosing   		= (data[0] >> 4) & 0x1;
-		uint8_t 	contactorError     		= (data[0] >> 5) & 0x1;
-		uint8_t 	contactorOpeningError 	= (data[0] >> 6) & 0x1;
-		int16_t 	lineCurrent 			= ((data[0] & 0x80) >> 7) | (data[1] << 1) | ((data[2] & 0x07) << 9); // extract bits 7 to 18
-		int16_t 	chargeCurrent 			= ((data[2] & 0xF8) >> 3) | ((data[3] & 0x7F) >> 6); // extract bits 19 to 30
-
-		contactorInfo[contactor_idx].precharge_close = prechargerClosed;
-		contactorInfo[contactor_idx].precharge_closing = prechargerClosing;
-		contactorInfo[contactor_idx].precharge_error = prechargerError;
-		contactorInfo[contactor_idx].contactor_close = contactorClosed;
-		contactorInfo[contactor_idx].contactor_closing = contactorClosing;
-		contactorInfo[contactor_idx].contactor_error = contactorError;
-		contactorInfo[contactor_idx].contactor_opening_error = contactorOpeningError;
-		contactorInfo[contactor_idx].line_current = lineCurrent;
-		contactorInfo[contactor_idx].charge_current = chargeCurrent;
-
-
-    }														// This is where we split the messages into heartbeat or board
-    // if the msg is a contactor heartbeat msg. We split them again into which heartbeat CCP it is
-    else {
-    	uint8_t contactor_idx = extID - CONTACTOR_HEARTBEAT; // get index (which contactor it is)
-
-    	uint16_t new_heartbeat = contactorMsg.data[0] + (contactorMsg.data[1] << 8);
-    	contactorInfo[contactor_idx].heartbeat = new_heartbeat;
-    }
-
-    return;
 }
 
 
@@ -474,8 +416,8 @@ void Control_Contactors()
 
 
 
-
-
+/*-------------------------*/
+/*----- Checking for Trips & Strips & Dead Heartbeats Functions -----*/
 
 
 void Update_TripStruct()
@@ -620,6 +562,14 @@ void Update_TripStruct()
 	}
 }
 
+// FAISAL PLEASE IMPLEMENT YOUR FUNCTIONS HERE
+void Update_SoftTripStruct() {
+
+}
+
+void Check_ContactorHeartbeats() {
+
+}
 
 /*-------------------------------------------*/
 
@@ -645,31 +595,70 @@ void clear_SoftTrips()
 
 
 
+/* ------ Updating Information Functions ------ */
+
+void Update_ContactorInfoStruct() {
+	CANmsg contactorMsg;
+
+    osStatus_t status = osMessageQueueGet(ContactorQueueHandle, &contactorMsg, NULL, 0); // Take from que and put into struct
+    if (status != osOK) {
+        return; // no new message
+    }
+    // defines are in CAN.h for mask and ID
+    uint32_t extID = contactorMsg.extendedID;
+
+    // if the msg is a contactor info msg
+    if ((extID & CNTR_MSG_MASK) == CONTACTOR_ID){
+    	uint8_t contactor_idx = extID - CONTACTOR_ID;
+
+    	uint8_t *data = contactorMsg.data;
+
+		uint8_t 	prechargerClosed   		= (data[0] >> 0) & 0x1;
+		uint8_t 	prechargerClosing  		= (data[0] >> 1) & 0x1;
+		uint8_t 	prechargerError    		= (data[0] >> 2) & 0x1;
+		uint8_t 	contactorClosed    		= (data[0] >> 3) & 0x1;
+		uint8_t 	contactorClosing   		= (data[0] >> 4) & 0x1;
+		uint8_t 	contactorError     		= (data[0] >> 5) & 0x1;
+		uint8_t 	contactorOpeningError 	= (data[0] >> 6) & 0x1;
+		int16_t 	lineCurrent 			= ((data[0] & 0x80) >> 7) | (data[1] << 1) | ((data[2] & 0x07) << 9); // extract bits 7 to 18
+		int16_t 	chargeCurrent 			= ((data[2] & 0xF8) >> 3) | ((data[3] & 0x7F) >> 6); // extract bits 19 to 30
+
+		contactorInfo[contactor_idx].precharge_close = prechargerClosed;
+		contactorInfo[contactor_idx].precharge_closing = prechargerClosing;
+		contactorInfo[contactor_idx].precharge_error = prechargerError;
+		contactorInfo[contactor_idx].contactor_close = contactorClosed;
+		contactorInfo[contactor_idx].contactor_closing = contactorClosing;
+		contactorInfo[contactor_idx].contactor_error = contactorError;
+		contactorInfo[contactor_idx].contactor_opening_error = contactorOpeningError;
+		contactorInfo[contactor_idx].line_current = lineCurrent;
+		contactorInfo[contactor_idx].charge_current = chargeCurrent;
 
 
+    }														// This is where we split the messages into heartbeat or board
+    // if the msg is a contactor heartbeat msg. We split them again into which heartbeat CCP it is
+    else {
+    	uint8_t contactor_idx = extID - CONTACTOR_HEARTBEAT; // get index (which contactor it is)
 
+    	uint16_t new_heartbeat = contactorMsg.data[0] + (contactorMsg.data[1] << 8);
+    	contactorInfo[contactor_idx].heartbeat = new_heartbeat;
+    }
 
-
-
-
-
-
-// LATER TASKS //
-void Update_DCDCStackStruct(void) //update power selection struct
-{
-
-
-	dcdc_stack.DCDC1_en = DCDC1_EN();
-	dcdc_stack._14V_Charge_EN = _14V_Charge_EN();
-	dcdc_stack.nDCDC_Fault = nDCDC1_Fault();
-	dcdc_stack._12V_Critical_Fault = _12V_Critical_Fault();
-	dcdc_stack._14V_Charger_Fault = _14V_Charger_Fault();
-	dcdc_stack._12V_Critical_UC = _12V_Critical_UC();
-
+    return;
 }
 
 
 
+void Update_DCDCStackStruct(void)
+{
+
+	dcdc_stack.DCDC1_en = read_DCDC1_EN();
+	dcdc_stack._14V_Charge_EN = read_14V_Charge_EN();
+	dcdc_stack.nDCDC_Fault = read_nDCDC_Fault();
+	dcdc_stack._12V_Critical_Fault = read_12V_Critical_Fault();
+	dcdc_stack._14V_Charger_Fault = read_14V_Charger_Fault();
+	dcdc_stack._12V_Critical_UC = read_12V_Critical_UC();
+
+}
 
 
 // This function reads battery-related CAN messages from a queue
@@ -682,7 +671,7 @@ void Update_BatteryInfoStruct(void) // updating Orion / battery info struct
     static uint8_t BatteryInfoStruct_MessageCounter = 0;
 
     // Try to get a message from the queue
-    osStatus_t status = osMessageQueueGet(BatteryInfoQueueHandle, &batteryMsg, NULL, 0);
+    osStatus_t status = osMessageQueueGet(BatteryQueueHandle, &batteryMsg, NULL, 0);
 
     // If a message was successfully received
     if (status == osOK)

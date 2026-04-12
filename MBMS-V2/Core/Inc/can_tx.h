@@ -13,5 +13,6 @@ void CAN_Tx_Init(void); //CAN TX setup (starts FD CAN)
 HAL_StatusTypeDef CAN_Tx_Send(const CANmsg *msg);
 
 void CAN_Tx_Task(void *argument);
+void CAN_Tx_Init(void);
 
 #endif // CAN_TX_

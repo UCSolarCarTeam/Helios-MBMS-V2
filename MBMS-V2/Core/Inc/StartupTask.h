@@ -3,9 +3,7 @@
 #include <stdint.h>
 
 
-// Change when electrical tells you to.
-#define MAIN_CONTACTOR_ON_ACTIVE 1
-#define COMMON_CONTACTOR_ON_ACTIVE 1
+
 
 
 
@@ -24,10 +22,10 @@ typedef enum
 
     STARTUP_CHECKS_COMPLETED,       // NEW: completed startup checks
 
-    STARTUP_LV_CLOSED,              // LV permission granted
+    STARTUP_LV_ENABLED,              // LV permission granted
 
     STARTUP_DCDC1_ON,               // DCDC1 enabled
-    STARTUP_CAN12V_ON,              // NEW: 12V CAN enabled
+    STARTUP_12V_CAN_ON,              // NEW: 12V CAN enabled
 
     STARTUP_MOTORS_ENABLED,         // motor permission granted
     STARTUP_ARRAY_ENABLED,          // NEW: array permission granted

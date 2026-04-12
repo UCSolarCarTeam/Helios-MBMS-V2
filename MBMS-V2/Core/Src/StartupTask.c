@@ -5,6 +5,7 @@
 #include "../Inc/StartupTask.h"
 #include "BatteryControlTask.h"
 #include "MBMS.h"
+#include "ReadGPIO.h"
 
 #include "main.h"
 #include "cmsis_os.h"
@@ -22,7 +23,7 @@
 /* Polling delay used while waiting for MPS/ESD state changes (ms). */
 #define POLL_DELAY_MS       10U
 
-extern uint8_t startupCheck_Counter = 0;
+
 
 /* ============================ PERMISSIONS (NO FLAGS) ========================= */
 /* Global permissions structure.
@@ -35,7 +36,7 @@ extern Contactor_Info contactorInfo[NUM_OF_CNTR];
 extern MBMS_Status mbmsStatus;
 extern Permissions mbmsPermissions;
 
-
+extern uint32_t startup_Check_Counter;
 
 
 /* ============================== HELPER FUNCTIONS ============================ */
@@ -50,48 +51,6 @@ static uint32_t ms_to_ticks(uint32_t ms)
     uint64_t ticks = (uint64_t)ms * (uint64_t)osKernelGetTickFreq();
     return (uint32_t)((ticks + 999ULL) / 1000ULL);
 }
-
-uint8_t read_Main_Contactor() {
-	return HAL_GPIO_ReadPin(Main_CNTR_Aux_GPIO_Port, Main_CNTR_Aux_Pin);
-}
-
-uint8_t read_Common_Contactor() {
-	return HAL_GPIO_ReadPin(Common_CNTR_Aux_GPIO_Port, Common_CNTR_Aux_Pin);
-}
-/* Read whether the Manual Power Switch (MPS) is ON.
- * - If the GPIO symbols exist, read the pin and compare to active level
- * - If not defined yet, return true (so development/testing can proceed)
- */
-static bool is_mps_on(void)
-{
-#if defined(MPS_GPIO_Port) && defined(MPS_Pin)
-    return (HAL_GPIO_ReadPin(MPS_GPIO_Port, MPS_Pin) == MPS_ACTIVE_LEVEL); // Define "MPS_ACTIVE_LEVEL" //
-#else
-    return false;
-#endif
-}
-
-/* Read whether the Emergency Stop (ESD) is pressed.
- * - If the GPIO symbols exist, read the pin and compare to active level
- * - If not defined yet, return false (assume not pressed)
- */
-static bool is_esd_pressed(void)
-{
-#if defined(ESD_GPIO_Port) && defined(ESD_Pin)
-    return (HAL_GPIO_ReadPin(ESD_GPIO_Port, ESD_Pin) == ESD_ACTIVE_LEVEL);
-#else
-    return true;
-#endif
-}
-
-
-
-
-
-
-
-
-
 
 
 
@@ -142,7 +101,7 @@ static void Startup_Flowchart(void)
      * ------------------------------------------------------------------------- */
     mbmsStatus.Startup_state = STARTUP_MPS_OPEN; /* Change #1 */
 
-    while (!is_mps_on())  /* Change #4*/
+    while (read_MPS() != MPS_ACTIVE)  /* Change #4*/
     {
         osDelay(POLL_DELAY_MS);   /* yield CPU while waiting */
         /* no timeout, no shutdown */
@@ -163,7 +122,7 @@ static void Startup_Flowchart(void)
     mbmsStatus.Startup_state = STARTUP_ESD_WAITING;
 
 
-	while (is_esd_pressed()) // if esd is pressed
+	while (read_ESD() == ESD_ACTIVE) // if esd is pressed
 	{
 		osDelay(POLL_DELAY_MS);  /* wait between polls */
 
@@ -179,7 +138,7 @@ static void Startup_Flowchart(void)
     mbmsStatus.Startup_state = STARTUP_ESD_RELEASED;
 
     // wait for main and common contactor to be closed
-    while (read_Common_Contactor() != MAIN_CONTACTOR_ON_ACTIVE || read_Main_Contactor() != COMMON_CONTACTOR_ON_ACTIVE) {
+    while (read_Common_CNTR_Aux() != MAIN_CNTR_AUX_ACTIVE || read_Main_CNTR_Aux() != MAIN_CNTR_AUX_ACTIVE) {
     	osDelay(POLL_DELAY_MS);
     }
 
@@ -188,7 +147,7 @@ static void Startup_Flowchart(void)
 
 
     // delays this task, so BCT can run startup checks more times
-    while (startupCheck_Counter < 5) {
+    while (startup_Check_Counter < 5) {
     	osDelay(POLL_DELAY_MS);
 
     }
@@ -201,7 +160,7 @@ static void Startup_Flowchart(void)
 
     /* Permissions: LV contactor */
     give_lv_perms();
-    mbmsStatus.Startup_state = STARTUP_LV_CLOSED;
+    mbmsStatus.Startup_state = STARTUP_LV_ENABLED;
 
     /* -------------------------------------------------------------------------
      * Enable DCDC1 (Aux -> Main battery switching)
@@ -218,10 +177,10 @@ static void Startup_Flowchart(void)
      * - Only compiles if GPIO macros exist
      * - Updates state to record CAN12V enable step
      * ------------------------------------------------------------------------- */
-#if defined(CAN12V_EN_GPIO_Port) && defined(CAN12V_EN_Pin)
-    HAL_GPIO_WritePin(CAN12V_EN_GPIO_Port, CAN12V_EN_Pin, CAN12V_ENABLE_LEVEL);
+#if defined(_12V_CAN_EN_GPIO_Port) && defined(_12V_CAN_EN_Pin)
+    HAL_GPIO_WritePin(_12V_CAN_EN_GPIO_Port, _12V_CAN_EN_Pin, _12V_CAN_EN_ACTIVE);
 #endif
-    mbmsStatus.Startup_state = STARTUP_CAN12V_ON;  /* state added for visibility */
+    mbmsStatus.Startup_state = STARTUP_12V_CAN_ON;  /* state added for visibility */
 
     /* Permissions: Motor contactor */
     give_motor_perms();
