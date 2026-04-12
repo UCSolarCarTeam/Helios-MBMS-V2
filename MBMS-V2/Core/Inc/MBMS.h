@@ -24,6 +24,8 @@
 #define MAX_HEARTBEAT_FAILS 3
 
 #define FREERTOS_TICK_PERIOD 1.0/configTICK_RATE_HZ
+// there are 1000 ticks per second btw
+// so there is 1 tick every 1 millisecond
 
 /* Enums */
 //typedef enum // match with the proper CAN ID's

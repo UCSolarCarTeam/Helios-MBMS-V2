@@ -240,7 +240,7 @@ static void MX_FDCAN1_Init(void)
   packInfoFilter.FilterIndex		= 0;
   packInfoFilter.FilterType 		= FDCAN_FILTER_MASK;
   packInfoFilter.FilterConfig	    = FDCAN_FILTER_TO_RXFIFO0;
-  packInfoFilter.FilterID1		    = PACK_INFO;
+  packInfoFilter.FilterID1		    = PACK_INFO_ID;
   packInfoFilter.FilterID2			= 0x1FFFFFFF;
 //STM32H5 stores ID as a normal 11-bit or 29-bit number in FILTERID1/FILTERID2 so >>13/<<3 not needed
 
@@ -254,7 +254,7 @@ static void MX_FDCAN1_Init(void)
   tempInfoFilter.FilterIndex		= 1;
   tempInfoFilter.FilterType 		= FDCAN_FILTER_MASK;
   tempInfoFilter.FilterConfig	    = FDCAN_FILTER_TO_RXFIFO0;
-  tempInfoFilter.FilterID1		    = TEMP_INFO;
+  tempInfoFilter.FilterID1		    = TEMP_INFO_ID;
   tempInfoFilter.FilterID2			= 0x1FFFFFFF;
 
   if(HAL_FDCAN_ConfigFilter(&hfdcan1, &tempInfoFilter) != HAL_OK)
@@ -267,7 +267,7 @@ static void MX_FDCAN1_Init(void)
   maxminVoltagedFilter.FilterIndex		= 2;
   maxminVoltagedFilter.FilterType 		= FDCAN_FILTER_MASK;
   maxminVoltagedFilter.FilterConfig	    = FDCAN_FILTER_TO_RXFIFO0;
-  maxminVoltagedFilter.FilterID1		= MIN_MAX_VOLTAGES;
+  maxminVoltagedFilter.FilterID1		= MIN_MAX_VOLTAGES_ID;
   maxminVoltagedFilter.FilterID2	 	= 0x1FFFFFFF;
 
   if(HAL_FDCAN_ConfigFilter(&hfdcan1, &maxminVoltagedFilter) != HAL_OK)

@@ -5,13 +5,13 @@
 
 #define CAN_MAX_DATA_LEN 8u // full CAN FD payload size in bytes
 //ORION EXTENDED IDS
-#define BMU_HEARTBEAT 		0x300
-#define STARTUP_INFO 		0x301
-#define PACK_INFO 			0x302
-#define ERRORS 				0x303
-#define TEMP_INFO 			0x304
-#define CELL_VOLTAGES 		0x305
-#define MIN_MAX_VOLTAGES 	0x30A
+#define BMU_HEARTBEAT 			0x300
+#define STARTUP_INFO 			0x301
+#define PACK_INFO_ID 			0x302
+#define ERRORS 					0x303
+#define TEMP_INFO_ID 			0x304
+#define CELL_VOLTAGES_ID 		0x305
+#define MIN_MAX_VOLTAGES_ID 	0x30A
 
 //Contactors
 #define CONTACTOR_MASK		0x1fffffe0

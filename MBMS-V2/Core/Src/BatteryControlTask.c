@@ -39,6 +39,8 @@ uint32_t pack_info_counter = 0;
 uint32_t temp_info_counter = 0;
 uint32_t cell_voltages_counter = 0;
 
+static uint32_t missingOBMS_MsgCounter = 0;
+
 
 void MBMSStatus_init(void)
 {
@@ -92,7 +94,8 @@ void BatteryControlTask(void* arg)
     	BCT_end_tick = osKernelGetTickCount();
     	BCT_difference_tick = BCT_end_tick - BCT_start_tick;
     	BCT_difference_seconds = taskTickLastStart;
-		taskTickLastStart += 10;
+
+		taskTickLastStart += 10; // BCT should take 10 ticks to run 1 cycle !!!!
 		osDelayUntil(taskTickLastStart);
     }
 }
@@ -145,6 +148,8 @@ void enter_BOOT() {
 
     /* 6. Reset Counters */
     BCT_Counter = 0;
+
+    missingOBMS_MsgCounter = 0;
 
 	startup_Check_Counter = 0;
 
@@ -691,8 +696,6 @@ void Update_BatteryInfoStruct(void) // updating Orion / battery info struct
 {
     CANmsg batteryMsg;  // Variable to store incoming CAN message
 
-    // Keeps track of how many cycles we have NOT received a message
-    static uint8_t BatteryInfoStruct_MessageCounter = 0;
 
     // Try to get a message from the queue
     osStatus_t status = osMessageQueueGet(BatteryQueueHandle, &batteryMsg, NULL, 0);
@@ -701,19 +704,16 @@ void Update_BatteryInfoStruct(void) // updating Orion / battery info struct
     if (status == osOK)
     {
         // Reset timeout counter since we got a message
-        BatteryInfoStruct_MessageCounter = 0;
+    	missingOBMS_MsgCounter = 0;
 
         // Indicate CAN communication is healthy
         mbmsStatus.OBMS_CAN_RR = 1;
-
-        // Clear timeout fault
-        mbmsHardTrips.OBMS_msg_timeout_trip = 0;
 
         // Pointer to the raw data bytes in the CAN message
         uint8_t *data = batteryMsg.data;
 
         // Check if this message contains pack-level information
-        if (batteryMsg.extendedID == PACK_INFO)
+        if (batteryMsg.extendedID == PACK_INFO_ID)
         {
             // Ensure message has enough bytes
             if (batteryMsg.DLC >= 8) // ?? its ok -m
@@ -736,7 +736,7 @@ void Update_BatteryInfoStruct(void) // updating Orion / battery info struct
         }
 
         // Check if this message contains temperature data
-        else if (batteryMsg.extendedID == TEMP_INFO)
+        else if (batteryMsg.extendedID == TEMP_INFO_ID)
         {
             // Ensure message has enough bytes
             if (batteryMsg.DLC >= 5)
@@ -753,7 +753,7 @@ void Update_BatteryInfoStruct(void) // updating Orion / battery info struct
         }
 
         // Check if this message contains cell voltage data
-        else if (batteryMsg.extendedID == CELL_VOLTAGES)
+        else if (batteryMsg.extendedID == CELL_VOLTAGES_ID)
         {
             // Ensure message has enough bytes
             if (batteryMsg.DLC >= 6) // check also
@@ -777,11 +777,11 @@ void Update_BatteryInfoStruct(void) // updating Orion / battery info struct
     else
     {
         // No message received → increment timeout counter
-        BatteryInfoStruct_MessageCounter++; // this is bad
+        missingOBMS_MsgCounter++; // this is bad
     }
 
     // If we missed too many messages in a row (timeout condition)
-    if (BatteryInfoStruct_MessageCounter >= 21) // check
+    if (((float) missingOBMS_MsgCounter/10.0) >= ORION_MSG_TIMEOUT_MS) // check
     {
         // Mark CAN communication as lost
         mbmsStatus.OBMS_CAN_RR = 0;

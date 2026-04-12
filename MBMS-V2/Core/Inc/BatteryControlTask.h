@@ -31,6 +31,19 @@
 #define ESD_ACTIVE_LEVEL 1 // ESD PRESSED - BPS
 #define DCDC1_ENABLE_LEVEL 1 // DCDC1 is enabled
 
+/* E.g. Temp Info is sent at 5Hz from OBMS which means one msg every 0.2 seconds
+ * BCT runs one cycle every 10 ticks, (1 tick every millisecond), so every 10 ms
+ * UpdateBatteryInfo gets things from queue with a timeout of 0
+ * Thus is there are no messages, it increments the no messages counter by 1 every 10ms
+ * Divide this counter by 10, and that is how many ms has passed since mbms recieved a msg from OBMS
+ * Then take that number and compare it to ORION_MSG_TIMEOUT_MS
+ * ORION_MSG_TIMEOUT_MS is currently set to 500ms meaning 0.5 seconds
+ * We are saying if we receive no messages from OBMS within 0.5 seconds, smth is wrong
+ * This makes sense bc we should AT LEAST be receiving a message every 0.2 seconds (Temp Info)
+ *
+ */
+#define ORION_MSG_TIMEOUT_MS 500
+
 
 void BatteryControlTask(void* arg);
 void BatteryControl();

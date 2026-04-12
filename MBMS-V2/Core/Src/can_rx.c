@@ -54,7 +54,7 @@ static void CAN_Rx()
  		 messages_got_yay++;
 
 
- 		 if(msg.extendedID == PACK_INFO || msg.extendedID == TEMP_INFO || msg.extendedID == CELL_VOLTAGES || msg.extendedID == MIN_MAX_VOLTAGES )
+ 		 if(msg.extendedID == PACK_INFO_ID || msg.extendedID == TEMP_INFO_ID || msg.extendedID == CELL_VOLTAGES_ID || msg.extendedID == MIN_MAX_VOLTAGES_ID )
  		 {
 
  			 status = osMessageQueuePut(BatteryQueueHandle, &msg, 0, osWaitForever);
