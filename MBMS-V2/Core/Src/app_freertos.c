@@ -27,6 +27,7 @@
 #include "can_tx.h"
 #include "BatteryControlTask.h"
 #include "StartupTask.h"
+#include "CANMessageSender.h"
 
 
 
@@ -50,7 +51,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
-//Task Handles
+
+/*------ Task Handles------*/
 
 osThreadId_t StartupTaskHandle;
 const osThreadAttr_t StartupTask_attributes = {
@@ -71,20 +73,23 @@ const osThreadAttr_t canRxTask_attributes = {
 	.priority   = (osPriority_t) osPriorityNormal,
     .stack_size = 256 * 4
   };
-osThreadId_t ContactorsTaskHandle;
-const osThreadAttr_t Contactors_attributes = {
-	.name 		= "ContactorsTask",
+osThreadId_t CANMessageSenderTaskHandle;
+const osThreadAttr_t CANMessageSenderTask_attributes = {
+	.name 		= "CANMessageSenderTask",
 	.priority   = (osPriority_t) osPriorityNormal,
     .stack_size = 256 * 4
   };
-osThreadId_t BatteryTaskHandle;
-const osThreadAttr_t Battery_attributes = {
-	.name 		= "BatteryTask",
+osThreadId_t BatteryControlTaskHandle;
+const osThreadAttr_t BatteryControlTask_attributes = {
+	.name 		= "BatteryControlTask",
 	.priority   = (osPriority_t) osPriorityNormal,
     .stack_size = 256 * 4
   };
 
-//Queue Handles
+
+
+/*------- Queue Handles -------*/
+
 osMessageQueueId_t canTxQueueHandle;
 const osMessageQueueAttr_t canTxQueue_attributes = {
 	  .name = "canTxQueue"
@@ -101,13 +106,13 @@ const osMessageQueueAttr_t contactors_attributes = {
 	};
 
 osMessageQueueId_t BatteryQueueHandle;
-
-
 const osMessageQueueAttr_t battery_attributes = {
 	  .name = "batteryQueue"
 	};
 
-//Mutex Handles
+
+/*----- Mutex Handles ------*/
+
 osMutexId_t MBMSTripMutexHandle;
 const osMutexAttr_t MBMSTripMutex_attributes = {
 		.name = "MBMSTripMutex",
@@ -221,8 +226,8 @@ void MX_FREERTOS_Init(void) {
   StartupTaskHandle = osThreadNew(StartupTask, NULL, &StartupTask_attributes);
   canTxTaskHandle = osThreadNew(CAN_Tx_Task, NULL, &canTxTask_attributes);
   canRxTaskHandle = osThreadNew(CAN_Rx_Task, NULL, &canRxTask_attributes);
-  //ContactorsTaskHandle = osThreadNew(ContactorsTask, NULL, &Contactors_attributes);
-  //BatteryTaskHandle = osThreadNew(BatteryTask, NULL, &Battery_attributes);
+  CANMessageSenderTaskHandle = osThreadNew(CANMessageSenderTask, NULL, &CANMessageSenderTask_attributes);
+  BatteryControlTaskHandle = osThreadNew(BatteryControlTask, NULL, &BatteryControlTask_attributes);
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */

@@ -12,26 +12,10 @@
 #include "BatteryControlTask.h"
 //#include "StartupTask.h"
 
-// Shared status and info structs
 
-extern ContactorCommand contactorCommand;
-extern PowerSelectionStatus powerSelectionStatus;
-extern ContactorInfo contactorInfo[6];
-
-
-/*
- * TO DO: extern the rest of the things u need :D
- *
- * Assume these instances already exist in the BCT src file (which we don't
- * have in this branch lol)
- *
- * Note: extern allows this file to use variables that you have declared in a
- * different file (in this case, BCT, which is why normally you would include the BCT
- * header file that I currently just have commented out as well)
- *
- */
-
-extern BatteryInfo batteryInfo;
+extern Contactor_Command contactorCommand;
+extern Contactor_Info contactorInfo[NUM_OF_CNTR];
+extern Battery_Info batteryInfo;
 extern MBMS_Status mbmsStatus;
 extern MBMS_Hard_Trips mbmsHardTrips;
 extern MBMS_Soft_Trips mbmsSoftTrips;
@@ -149,12 +133,12 @@ void send_MBMSStatus() {
 			+ ((mbmsStatus.OBMS_CAN_RR & 0x1) << 4)    				 + ((mbmsStatus.MPS & 0x1) << 5)
 			+ ((mbmsStatus.ESD & 0x1) << 6) 				 + ((mbmsStatus.Abatt_EN & 0x1) << 7)
 			+ ((mbmsStatus.EVCC_12V_Sw & 0x1) << 8)						 + ((mbmsStatus.Startup_state & 0xf) << 9)
-			+ ((mbmsStatus.System_state) << 13);
+			+ ((mbmsStatus.System_state & 0x7) << 13);
 
 	mbmsStatusMsg.data[0] = (mbmsStatusData & 0xff);
 	mbmsStatusMsg.data[1] = (mbmsStatusData & 0xff00) >> 8;
 
-	mbmsStatusMsg.DLC = 2; // 3 bytes as of may 21 (added carState..)
+	mbmsStatusMsg.DLC = 2;
 	mbmsStatusMsg.extendedID = MBMS_STATUS_ID;
 	mbmsStatusMsg.ID = 0x0;
 	osMessageQueuePut(canTxQueueHandle, &mbmsStatusMsg, 0, osWaitForever);
@@ -192,9 +176,12 @@ void send_MBMSSoftTrips() {
 	tripMsg.extendedID = MBMS_SOFT_TRIP_ID;
 	tripMsg.ID = 0x0;
 	osMessageQueuePut(canTxQueueHandle, &tripMsg, 0, osWaitForever);
+}
+
 
 //checked good
 void send_MBMSTrips() {
+
 	CANmsg tripMsg;
 	uint32_t tripData = ((mbmsHardTrips.High_volt_cell_trip & 0x1) << 0)   		  +	((mbmsHardTrips.Low_volt_cell_trip & 0x1) << 1)
 			+ ((mbmsHardTrips.CMN_high_cur_trip & 0x1) << 2)   			 	 + ((mbmsHardTrips.LV_high_cur_trip & 0x1) << 3)
@@ -213,10 +200,11 @@ void send_MBMSTrips() {
 	tripMsg.DLC = 3; // 3 bytes
 	tripMsg.extendedID = MBMS_TRIP_ID;
 	tripMsg.ID = 0x0;
+
 	osMessageQueuePut(canTxQueueHandle, &tripMsg, 0, osWaitForever);
 
 }
-}
+
 
 
 

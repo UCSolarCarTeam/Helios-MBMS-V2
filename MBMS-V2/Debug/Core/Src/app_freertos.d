@@ -45,7 +45,7 @@ Core/Src/app_freertos.o: ../Core/Src/app_freertos.c \
  ../Middlewares/Third_Party/CMSIS/RTOS2/Include/cmsis_os2.h \
  ../Core/Inc/CAN.h ../Core/Inc/CAN.h ../Core/Inc/can_rx.h \
  ../Core/Inc/can_tx.h ../Core/Inc/BatteryControlTask.h \
- ../Core/Inc/StartupTask.h
+ ../Core/Inc/StartupTask.h ../Core/Inc/CANMessageSender.h
 ../Core/Inc/app_freertos.h:
 ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h:
 ../Core/Inc/FreeRTOSConfig.h:
@@ -97,3 +97,4 @@ Core/Src/app_freertos.o: ../Core/Src/app_freertos.c \
 ../Core/Inc/can_tx.h:
 ../Core/Inc/BatteryControlTask.h:
 ../Core/Inc/StartupTask.h:
+../Core/Inc/CANMessageSender.h:

@@ -71,50 +71,7 @@ typedef struct{
 	uint8_t array;
 	uint8_t LV;
 	uint8_t charge;
-} ContactorCommand;
-
-typedef struct {
-	uint8_t nMainPowerSwitch;
-	uint8_t ExternalShutdown;
-	uint8_t EN1;
-	uint8_t nDCDC_Fault;
-	uint8_t n3A_OC;
-	uint8_t nDCDC_On;
-	uint8_t nCHG_Fault;
-	uint8_t nCHG_On;
-	uint8_t nCHG_LV_En;
-	uint8_t ABATT_Disable;
-	uint8_t Key;
-} PowerSelectionStatus;
-
-
-typedef struct {
-	uint8_t prechargerClosed;
-	uint8_t prechargerClosing;
-	uint8_t prechargerError;
-	uint8_t contactorClosed; //two bits become one variable, 00 = open, 01 = closed, 10 = closing
-	uint8_t contactorClosing;
-	uint8_t contactorError;
-	int16_t lineCurrent;
-	int16_t chargeCurrent;
-	uint8_t contactorOpeningError;
-	uint16_t heartbeat;
-} ContactorInfo;
-
-
-typedef struct {
-	uint8_t highCellVoltageWarning;
-	uint8_t lowCellVoltageWarning;
-	uint8_t commonHighCurrentWarning;
-	uint8_t motorHighCurrentWarning;
-	uint8_t arrayHighCurrentWarning;
-	uint8_t LVHighCurrentWarning;
-	uint8_t chargeHighCurrentWarning;
-	uint8_t highBatteryWarning;
-	uint8_t highTemperatureWarning;
-	uint8_t lowTemperatureWarning;
-
-} MBMSSoftBatteryLimitWarning;
+} Contactor_Command;
 
 
 typedef struct {
@@ -140,16 +97,8 @@ typedef struct {
 //    uint16_t minCellVoltage;
 //    uint16_t maxPackVoltage;
 //    uint16_t minPackVoltage;
-} BatteryInfo;
+} Battery_Info;
 
-
-typedef struct
-{
-    uint8_t low_voltage;
-    uint8_t motor;
-    uint8_t array;
-    uint8_t charge;
-} Contactor_CMND_t;
 
 typedef struct
 {
