@@ -201,11 +201,12 @@ void startupCheck() // change after this function is done: waitForFirstHeartbeat
         return;
     }
 
-    if (!checkContactorsOpen() || !checkPrechargersOpen())
-    {
-    	enter_BPS_FAULT();
-        return;
-    }
+    // dont want this to run during startup state when contactors can be closed/closing
+//    if (!checkContactorsOpen() || !checkPrechargersOpen())
+//    {
+//    	enter_BPS_FAULT();
+//        return;
+//    }
 
     if (!startupBatteryCheck())
     {
