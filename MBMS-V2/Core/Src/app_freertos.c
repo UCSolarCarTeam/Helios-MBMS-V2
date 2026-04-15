@@ -154,6 +154,14 @@ const osThreadAttr_t defaultTask_attributes = {
   .stack_size = 128 * 4
 };
 
+/* USER CODE BEGIN Flags */
+	osEventFlagsId_t shutoffFlagHandle;
+	const osEventFlagsAttr_t shutoffFlag_attributes = {
+			.name = "shutoffFlag"
+	};
+
+/* USER CODE END Flags */
+
 
 
 
@@ -218,6 +226,8 @@ void MX_FREERTOS_Init(void) {
 				);
 
   /* USER CODE END RTOS_QUEUES */
+
+
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
@@ -228,6 +238,8 @@ void MX_FREERTOS_Init(void) {
   canRxTaskHandle = osThreadNew(CAN_Rx_Task, NULL, &canRxTask_attributes);
   CANMessageSenderTaskHandle = osThreadNew(CANMessageSenderTask, NULL, &CANMessageSenderTask_attributes);
   BatteryControlTaskHandle = osThreadNew(BatteryControlTask, NULL, &BatteryControlTask_attributes);
+
+  shutoffFlagHandle = osEventFlagsNew(&shutoffFlag_attributes);
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */

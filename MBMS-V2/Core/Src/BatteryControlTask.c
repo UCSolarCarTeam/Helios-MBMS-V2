@@ -168,12 +168,18 @@ void enter_BOOT() {
 
 void enter_MPS_DISCONNECTED()
 {
-
-
+	//mbmsHardTrips
+	uint8_t carStates = MPS_DISCONNECTED;
+	mbmsPermissions.faulted = 1; //contactors not allowed to close
+	osEventFlagsSet(shutoffFlagHandle, (MPS_FLAG | SHUTOFF_FLAG)); //idk if I understnad this
 }
 
-void enter_BPS_FAULT() {
+void enter_BPS_FAULT()
+{
+	mbmsPermissions.faulted = 1;
+	uint8_t carStates = BPS_FAULT;
 
+	osEventFlagsSet(shutoffFlagHandle, (HARD_BAT_LIMIT_FLAG | SHUTOFF_FLAG));
 }
 
 void enter_SOFT_TRIP() {
@@ -360,29 +366,46 @@ uint8_t checkContactorsOpen()
 
 void SystemStateMachine()
 {
-//	// Make  is plugged in to stand in for the CAN msg
-//	uint8_t plugged = EVCC_12V_SW;
-//
-//	switch (carState)
-//	{
-//	case BOOT:
-//		//make sure these are the counters faisal used for updatEBATTERYINFO
-//		if((pack_info_counter >= MINIMUM_ORION_MESSAGE_RECEIVED ) && (temp_info_counter >= MINIMUM_ORION_MESSAGE_RECEIVED)
-//			&& (cell_voltages_counter >= MINIMUM_ORION_MESSAGE_RECEIVED))
-//		{
-//			carState = STARTUP;
-//		}
-//		break;
-//
-//
-//	case STARTUP:
-//
-//		// will go to BPS_FAULT state if startup checks do not pass
-//		StartupCheck(); //check faisal name is same
-//
-//		//checks MPS
-//		if(read_nMPS() == 1)
-//	}
+	// Make  is plugged in to stand in for the CAN msg
+	//uint8_t plugged = EVCC_12V_SW; //TODO: ACTUALLY DO THIS LOL
+
+	switch (carState)
+	{
+	case BOOT:
+		//make sure these are the counters faisal used for updatEBATTERYINFO
+		if((pack_info_counter >= MINIMUM_ORION_MESSAGE_RECEIVED ) && (temp_info_counter >= MINIMUM_ORION_MESSAGE_RECEIVED)
+			&& (cell_voltages_counter >= MINIMUM_ORION_MESSAGE_RECEIVED))
+		{
+			carState = STARTUP;
+		}
+		break;
+
+
+	case STARTUP:
+
+		// will go to BPS_FAULT state if startup checks do not pass
+		startupCheck();
+
+		//checks MPS
+		if(read_MPS() == 1)
+		{
+			enter_MPS_DISCONNECTED();
+					break;
+		}
+
+		if(read_ESD() == 1)
+		{
+			mbmsHardTrips.ESD_trip = 1;
+			enter_BPS_FAULT();
+		}
+
+		if(mbmsStatus.Startup_state == COMPLETED)
+		{
+			enter_FULLY_OPERATIONAL();
+		}
+
+		break;
+	}
 }
 
 
