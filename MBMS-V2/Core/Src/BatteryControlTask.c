@@ -169,29 +169,41 @@ void enter_BOOT() {
 void enter_MPS_DISCONNECTED()
 {
 	//mbmsHardTrips
-	uint8_t carStates = MPS_DISCONNECTED;
+	carState = MPS_DISCONNECTED;
 	mbmsPermissions.faulted = 1; //contactors not allowed to close
 	osEventFlagsSet(shutoffFlagHandle, (MPS_FLAG | SHUTOFF_FLAG)); //idk if I understnad this
 }
 
 void enter_BPS_FAULT()
 {
+	HAL_GPIO_WritePin(BPS_Fault_GPIO_Port, BPS_Fault_Pin, 1);
 	mbmsPermissions.faulted = 1;
-	uint8_t carStates = BPS_FAULT;
+	carState = BPS_FAULT;
 
+	osStatus_t a = osMutexAcquire(MBMSStatusMutexHandle, UPDATING_MUTEX_TIMEOUT);
+	if(a == osOK) {
+		// update mbms status
+		mbmsStatus.BPS_Fault = 1;
+		osMutexRelease(MBMSStatusMutexHandle);
+
+	}
 	osEventFlagsSet(shutoffFlagHandle, (HARD_BAT_LIMIT_FLAG | SHUTOFF_FLAG));
 }
 
-void enter_SOFT_TRIP() {
-
+void enter_SOFT_TRIP()
+{
+	carState = SOFT_TRIP;
+	mbmsPermissions.faulted = 1;
 }
 
-void enter_CHARGING() {
-
+void enter_CHARGING()
+{
+	carState = CHARGING;
 }
 
-void enter_FULLY_OPERATIONAL() {
-
+void enter_FULLY_OPERATIONAL()
+{
+	carState = FULLY_OPERATIONAL;
 }
 
 
