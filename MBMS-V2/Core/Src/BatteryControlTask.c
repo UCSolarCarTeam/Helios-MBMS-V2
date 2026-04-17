@@ -31,9 +31,9 @@ Contactor_Command contactorCommand;
 DCDC_Stack dcdc_stack;
 
 
-uint32_t heartbeat_check_count = 0;
+uint32_t heartbeat_enter_SOFT_TRIP_count = 0;
 uint16_t previousHeartbeats[NUM_OF_CNTR] = {0};
-uint32_t heartbeatLastUpdatedTime[NUM_OF_CNTR] = {0}; // check datatype..
+uint32_t heartbeatLastUpdatedTime[NUM_OF_CNTR] = {0}; // enter_SOFT_TRIP datatype..
 
 uint32_t pack_info_counter = 0;
 uint32_t temp_info_counter = 0;
@@ -55,7 +55,7 @@ void perms_init()
 {
     // Reset all system permissions to safe defaults.
     // This prevents the battery from charging or discharging
-    // until the startup checks are complete.
+    // until the startup enter_SOFT_TRIPs are complete.
 
     // TODO: set permission variables here
 	mbmsPermissions.lv = 0;
@@ -151,7 +151,7 @@ void enter_BOOT() {
 
     missingOBMS_MsgCounter = 0;
 
-	startup_Check_Counter = 0;
+	startup_enter_SOFT_TRIP_Counter = 0;
 
 	pack_info_counter = 0;
 	temp_info_counter = 0;
@@ -209,7 +209,7 @@ void enter_FULLY_OPERATIONAL()
 
 
 /*-------------------------------------------*/
-/* Startup checks */
+/* Startup enter_SOFT_TRIPs */
 void startupCheck() // change after this function is done: waitForFirstHeartbeats
 {
     /* Run startup gate checks in order. If any fail, enter fault. */
@@ -417,6 +417,38 @@ void SystemStateMachine()
 		}
 
 		break;
+	case FULLY_OPERATIONAL:
+		if(read_MPS() == 1)
+		{
+			enter_MPS_DISCONNECTED();
+					break;
+		}
+
+		if(plugged && (read_14V_Charge_EN() == 1))
+		{
+			/*idk if i understand this */
+			mbmsPermissions.lv = 0;
+			mbmsPermissions.motor = 0;
+			HAL_GPIO_WritePin(_12V_CAN_State_GPIO_Port, _12V_CAN_State_Pin, GPIO_PIN_RESET); //12V CAN Disabled
+		}
+
+		if(plugged && (contactorInfo[LV].contactor_close == OPEN_CONTACTOR) && (contactorInfo[MOTOR].contactor_close == OPEN_CONTACTOR))
+		{
+			HAL_GPIO_WritePin(_14V_Charge_EN_GPIO_Port, _14V_Charge_EN_Pin, GPIO_PIN_RESET); //ENABLE THE CHARGER
+			mbmsPermissions.charge = 1;
+		}
+
+		if(plugged && (contactorInfo[CHARGE].contactor_close == CLOSE_CONTACTOR))
+		{
+			enter_CHARGING();
+		}
+		Check_ContactorHeartbeats();
+		Update_SoftTripStruct();
+		Update_TripStruct();
+		break;
+
+	case CHARGING:
+
 	}
 }
 
