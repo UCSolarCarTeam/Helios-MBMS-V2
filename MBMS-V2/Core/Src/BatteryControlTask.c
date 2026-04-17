@@ -448,6 +448,11 @@ void SystemStateMachine()
 		break;
 
 	case CHARGING:
+	case BPS_FAULT:
+		break;
+	case MPS_DISCONNECTED:
+		break;
+	case SOFT_TRIP:
 
 	}
 }
