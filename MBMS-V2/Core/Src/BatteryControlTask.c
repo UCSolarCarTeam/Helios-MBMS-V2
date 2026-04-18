@@ -454,8 +454,6 @@ void SystemStateMachine()
 		break;
 
 	case CHARGING:
-		checkKeyShutdown();
-
 		if(read_MPS() == 1)
 		{
 			enter_MPS_DISCONNECTED();
@@ -465,12 +463,17 @@ void SystemStateMachine()
 		if(!plugged && (read_Discharge_EN() == 1))
 		{
 			HAL_GPIO_WritePin(_14V_Charge_EN_GPIO_Port, _14V_Charge_EN_Pin, GPIO_PIN_SET); //Discharge THE CHARGER
-			mbmsPermissions.charge = 1;
+			mbmsPermissions.charge = 0;
 		}
 
 		if(contactorInfo[CHARGE].contactor_close == OPEN_CONTACTOR)
 		{
+			HAL_GPIO_WritePin(_12V_CAN_PCHG_GPIO_Port, _12V_CAN_PCHG_Pin, _12V_CAN_PCHG_ACTIVE);
+		    while (read_12V_CAN_State() != _12V_CAN_STATE_ACTIVE) {
+		    	osDelay(POLL_DELAY_MS);
+		    }
 			HAL_GPIO_WritePin(_12V_CAN_State_GPIO_Port, _12V_CAN_State_Pin, GPIO_PIN_SET); //12V CAN Enabled
+			HAL_GPIO_WritePin(_12V_CAN_PCHG_GPIO_Port, _12V_CAN_PCHG_Pin, !(_12V_CAN_PCHG_ACTIVE));
 			mbmsPermissions.lv = 1;
 			mbmsPermissions.motor = 1;
 		}
