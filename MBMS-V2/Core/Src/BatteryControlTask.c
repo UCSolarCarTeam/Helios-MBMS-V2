@@ -162,6 +162,12 @@ void enter_BOOT() {
 		previousHeartbeats[i] = 0;
 		heartbeatLastUpdatedTime[i] = 0;
 		contactorInfo[i].heartbeat = 0;
+		/* 8. Make sure contactors open */
+		if (!checkContactorsOpen() || !checkPrechargersOpen())
+	{
+		enter_BPS_FAULT();
+		return;
+	}
 	}
 
 }
@@ -379,7 +385,7 @@ uint8_t checkContactorsOpen()
 void SystemStateMachine()
 {
 	// Make  is plugged in to stand in for the CAN msg
-	//uint8_t plugged = EVCC_12V_SW; //TODO: ACTUALLY DO THIS LOL
+	uint8_t plugged = read_EVCC_12_SW();
 
 	switch (carState)
 	{
@@ -448,12 +454,58 @@ void SystemStateMachine()
 		break;
 
 	case CHARGING:
+		checkKeyShutdown();
+
+		if(read_MPS() == 1)
+		{
+			enter_MPS_DISCONNECTED();
+			break;
+		}
+
+		if(!plugged && (read_Discharge_EN() == 1))
+		{
+			HAL_GPIO_WritePin(_14V_Charge_EN_GPIO_Port, _14V_Charge_EN_Pin, GPIO_PIN_SET); //Discharge THE CHARGER
+			mbmsPermissions.charge = 1;
+		}
+
+		if(contactorInfo[CHARGE].contactor_close == OPEN_CONTACTOR)
+		{
+			HAL_GPIO_WritePin(_12V_CAN_State_GPIO_Port, _12V_CAN_State_Pin, GPIO_PIN_SET); //12V CAN Enabled
+			mbmsPermissions.lv = 1;
+			mbmsPermissions.motor = 1;
+		}
+
+		if((contactorInfo[LV].contactor_close == CLOSE_CONTACTOR) && (contactorInfo[MOTOR].contactor_close == CLOSE_CONTACTOR))
+		{
+			carState = FULLY_OPERATIONAL;
+		}
+		Check_ContactorHeartbeats();
+		Update_SoftTripStruct();
+		Update_TripStruct();
+		break;
 	case BPS_FAULT:
 		break;
 	case MPS_DISCONNECTED:
 		break;
 	case SOFT_TRIP:
 
+			if(batteryInfo.highCellVoltage == 1)
+			{
+				mbmsPermissions.charge = 0;
+				mbmsPermissions.array  = 0;
+			}
+			if(batteryInfo.lowCellVoltage == 1)
+			{
+				mbmsPermissions.motor = 0;
+			}
+			if(read_MPS() == 1)
+			{
+				enter_MPS_DISCONNECTED();
+				break;
+			}
+			Check_ContactorHeartbeats();
+			Update_TripStruct();
+			break;
 	}
 }
 

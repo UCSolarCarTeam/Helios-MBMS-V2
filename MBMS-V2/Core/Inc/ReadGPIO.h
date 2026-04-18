@@ -41,6 +41,8 @@
 #define	read_12V_Critical_Fault() 				 HAL_GPIO_ReadPin(_12V_Critical_Fault_GPIO_Port,_12V_Critical_Fault_Pin)
 #define	read_14V_Charger_Fault() 				 HAL_GPIO_ReadPin(_14V_Charger_Fault_GPIO_Port, _14V_Charger_Fault_Pin)
 #define	read_12V_Critical_UC()					 HAL_GPIO_ReadPin(_12V_Critical_UC_GPIO_Port, _12V_Critical_UC_Pin)
+#define	read_Discharge_EN() 				 	 HAL_GPIO_ReadPin(Discharge_Enable_GPIO_Port, Discharge_Enable_Pin)
+#define read_EVCC_12_SW()						 HAL_GPIO_ReadPin(EVCC_12V_Sw_GPIO_Port, EVCC_12V_Sw_Pin)
 
 #define read_MPS()								 HAL_GPIO_ReadPin(MPS_GPIO_Port, MPS_Pin)
 #define read_ESD()								 HAL_GPIO_ReadPin(ESD_GPIO_Port, ESD_Pin)
