@@ -27,6 +27,8 @@
 
 #define EVCC_12_SW_ACTIVE 1 // charger plugged in
 
+#define BPS_FAULT_ACTIVE 1 // strobe en essentially
+
 
 #define MAIN_CNTR_AUX_ACTIVE 1 // main cntr is closed
 #define COMMON_CNTR_ACTIVE 1 // common cntr is closed

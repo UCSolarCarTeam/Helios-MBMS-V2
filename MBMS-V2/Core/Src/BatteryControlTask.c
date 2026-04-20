@@ -182,7 +182,7 @@ void enter_MPS_DISCONNECTED()
 
 void enter_BPS_FAULT()
 {
-	HAL_GPIO_WritePin(BPS_Fault_GPIO_Port, BPS_Fault_Pin, 1); // strobe enabling essentially
+	HAL_GPIO_WritePin(BPS_Fault_GPIO_Port, BPS_Fault_Pin, BPS_FAULT_ACTIVE); // strobe enabling essentially
 	mbmsPermissions.faulted = 1;
 	carState = BPS_FAULT;
 
@@ -466,7 +466,7 @@ void SystemStateMachine()
 
 	case CHARGING:
 
-		if(read_MPS() == MPS_ACTIVE)
+		if(read_MPS() != MPS_ACTIVE)
 		{
 			enter_MPS_DISCONNECTED();
 			break;
@@ -733,6 +733,14 @@ void Update_TripStruct()
 
 		// Check ESD
 		if (read_ESD() == ESD_ACTIVE) {
+			mbmsHardTrips.ESD_trip = 1;
+			BPS_Fault = 1;
+		}
+
+		// check main & common cntr !!!
+		if ((read_Common_CNTR_Aux() != COMMON_CNTR_ACTIVE) || (read_Main_CNTR_Aux() != MAIN_CNTR_AUX_ACTIVE)) {
+			// note there is no displayed fault for this :C
+			// bc technically if either of these r open hardware shuld do some faulting process for us....
 			BPS_Fault = 1;
 		}
 
