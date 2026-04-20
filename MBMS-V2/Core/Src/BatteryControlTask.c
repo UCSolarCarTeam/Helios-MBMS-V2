@@ -151,7 +151,7 @@ void enter_BOOT() {
 
     missingOBMS_MsgCounter = 0;
 
-	startup_enter_SOFT_TRIP_Counter = 0;
+    startup_Check_Counter = 0;
 
 	pack_info_counter = 0;
 	temp_info_counter = 0;
@@ -182,7 +182,7 @@ void enter_MPS_DISCONNECTED()
 
 void enter_BPS_FAULT()
 {
-	HAL_GPIO_WritePin(BPS_Fault_GPIO_Port, BPS_Fault_Pin, 1);
+	HAL_GPIO_WritePin(BPS_Fault_GPIO_Port, BPS_Fault_Pin, 1); // strobe enabling essentially
 	mbmsPermissions.faulted = 1;
 	carState = BPS_FAULT;
 
@@ -251,7 +251,7 @@ uint8_t waitForFirstHeartbeats() {
 
 	for(int i = 0; i < NUM_OF_CNTR; i++) {
 
-		heartbeat_check_count++;
+		//heartbeat_check_count++;
 
 		// case that a ccp heartbeat has died
 		if (heartbeatFailCounter[i] > MAX_HEARTBEAT_FAILS) {
@@ -385,11 +385,17 @@ uint8_t checkContactorsOpen()
 void SystemStateMachine()
 {
 	// Make  is plugged in to stand in for the CAN msg
-	uint8_t plugged = read_EVCC_12_SW();
+	uint8_t plugged = read_EVCC_12_SW() == EVCC_12_SW_ACTIVE;
 
 	switch (carState)
 	{
 	case BOOT:
+		// checking that all cntrs and pchgs r open initially
+		if ( !(checkContactorsOpen() && checkPrechargersOpen()) ) {
+			enter_BPS_FAULT();
+			break;
+		}
+
 		//make sure these are the counters faisal used for updatEBATTERYINFO
 		if((pack_info_counter >= MINIMUM_ORION_MESSAGE_RECEIVED ) && (temp_info_counter >= MINIMUM_ORION_MESSAGE_RECEIVED)
 			&& (cell_voltages_counter >= MINIMUM_ORION_MESSAGE_RECEIVED))
@@ -405,13 +411,13 @@ void SystemStateMachine()
 		startupCheck();
 
 		//checks MPS
-		if(read_MPS() == 1)
+		if(read_MPS() != MPS_ACTIVE)
 		{
 			enter_MPS_DISCONNECTED();
-					break;
+			break;
 		}
 
-		if(read_ESD() == 1)
+		if(read_ESD() == ESD_ACTIVE)
 		{
 			mbmsHardTrips.ESD_trip = 1;
 			enter_BPS_FAULT();
@@ -423,14 +429,17 @@ void SystemStateMachine()
 		}
 
 		break;
+
+
 	case FULLY_OPERATIONAL:
-		if(read_MPS() == 1)
+
+		if(read_MPS() != MPS_ACTIVE)
 		{
 			enter_MPS_DISCONNECTED();
 					break;
 		}
 
-		if(plugged && (read_14V_Charge_EN() == 1))
+		if(plugged && (read_Charge_EN() == CHARGE_ENABLE_ACTIVE))
 		{
 			/*idk if i understand this */
 			mbmsPermissions.lv = 0;
@@ -440,7 +449,7 @@ void SystemStateMachine()
 
 		if(plugged && (contactorInfo[LV].contactor_close == OPEN_CONTACTOR) && (contactorInfo[MOTOR].contactor_close == OPEN_CONTACTOR))
 		{
-			HAL_GPIO_WritePin(_14V_Charge_EN_GPIO_Port, _14V_Charge_EN_Pin, GPIO_PIN_RESET); //ENABLE THE CHARGER
+			HAL_GPIO_WritePin(_14V_Charge_EN_GPIO_Port, _14V_Charge_EN_Pin, CHARGE_ENABLE_ACTIVE); //ENABLE THE CHARGER
 			mbmsPermissions.charge = 1;
 		}
 
@@ -448,67 +457,84 @@ void SystemStateMachine()
 		{
 			enter_CHARGING();
 		}
+
 		Check_ContactorHeartbeats();
 		Update_SoftTripStruct();
 		Update_TripStruct();
+
 		break;
 
 	case CHARGING:
-		if(read_MPS() == 1)
+
+		if(read_MPS() == MPS_ACTIVE)
 		{
 			enter_MPS_DISCONNECTED();
 			break;
 		}
 
-		if(!plugged && (read_Discharge_EN() == 1))
+		// if charger unplugged & allowed to discharge
+		if( !plugged && (read_Discharge_EN() == DISCHARGE_ENABLE_ACTIVE))
 		{
-			HAL_GPIO_WritePin(_14V_Charge_EN_GPIO_Port, _14V_Charge_EN_Pin, GPIO_PIN_SET); //Discharge THE CHARGER
+			HAL_GPIO_WritePin(_14V_Charge_EN_GPIO_Port, _14V_Charge_EN_Pin, !_14V_CHARGE_EN_ACTIVE); //Discharge THE CHARGER
 			mbmsPermissions.charge = 0;
 		}
 
+		// once charge cntr is opened, close 12V CAN pchg
 		if(contactorInfo[CHARGE].contactor_close == OPEN_CONTACTOR)
 		{
 			HAL_GPIO_WritePin(_12V_CAN_PCHG_GPIO_Port, _12V_CAN_PCHG_Pin, _12V_CAN_PCHG_ACTIVE);
-		    while (read_12V_CAN_State() != _12V_CAN_STATE_ACTIVE) {
-		    	osDelay(POLL_DELAY_MS);
-		    }
-			HAL_GPIO_WritePin(_12V_CAN_State_GPIO_Port, _12V_CAN_State_Pin, GPIO_PIN_SET); //12V CAN Enabled
+		}
+
+		// once done 12V CAN pchging, close 12V CAN cntr
+		if ((read_12V_CAN_State() == _12V_CAN_STATE_ACTIVE) && (read_12V_CAN_PCHG() == _12V_CAN_PCHG_ACTIVE)) {
+			HAL_GPIO_WritePin(_12V_CAN_EN_GPIO_Port, _12V_CAN_EN_Pin, _12V_CAN_EN_ACTIVE);
 			HAL_GPIO_WritePin(_12V_CAN_PCHG_GPIO_Port, _12V_CAN_PCHG_Pin, !(_12V_CAN_PCHG_ACTIVE));
+		}
+
+		// once 12V CAN fully enabled, enable LV & motor
+		if (read_12V_CAN_EN() == _12V_CAN_EN_ACTIVE) {
 			mbmsPermissions.lv = 1;
 			mbmsPermissions.motor = 1;
 		}
 
+		// finally, car becomes fully op
 		if((contactorInfo[LV].contactor_close == CLOSE_CONTACTOR) && (contactorInfo[MOTOR].contactor_close == CLOSE_CONTACTOR))
 		{
-			carState = FULLY_OPERATIONAL;
+			enter_FULLY_OPERATIONAL();
 		}
+
 		Check_ContactorHeartbeats();
 		Update_SoftTripStruct();
 		Update_TripStruct();
+
 		break;
+
 	case BPS_FAULT:
 		break;
+
 	case MPS_DISCONNECTED:
 		break;
+
 	case SOFT_TRIP:
 
-			if(batteryInfo.highCellVoltage == 1)
-			{
-				mbmsPermissions.charge = 0;
-				mbmsPermissions.array  = 0;
-			}
-			if(batteryInfo.lowCellVoltage == 1)
-			{
-				mbmsPermissions.motor = 0;
-			}
-			if(read_MPS() == 1)
-			{
-				enter_MPS_DISCONNECTED();
-				break;
-			}
-			Check_ContactorHeartbeats();
-			Update_TripStruct();
+		if(batteryInfo.highCellVoltage == 1)
+		{
+			mbmsPermissions.charge = 0;
+			mbmsPermissions.array  = 0;
+		}
+		if(batteryInfo.lowCellVoltage == 1)
+		{
+			mbmsPermissions.motor = 0;
+		}
+		if(read_MPS() != MPS_ACTIVE)
+		{
+			enter_MPS_DISCONNECTED();
 			break;
+		}
+
+		Check_ContactorHeartbeats();
+		Update_TripStruct();
+		break;
 	}
 }
 
