@@ -517,12 +517,12 @@ void SystemStateMachine()
 
 	case SOFT_TRIP:
 
-		if(batteryInfo.highCellVoltage == 1)
+		if(mbmsSoftTrips.High_volt_cell_Strip == 1)
 		{
 			mbmsPermissions.charge = 0;
 			mbmsPermissions.array  = 0;
 		}
-		if(batteryInfo.lowCellVoltage == 1)
+		if(mbmsSoftTrips.Low_volt_cell_Strip == 1)
 		{
 			mbmsPermissions.motor = 0;
 		}
