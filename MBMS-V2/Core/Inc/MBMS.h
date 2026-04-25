@@ -198,7 +198,7 @@ typedef struct {
 	uint8_t precharge_close; // pre-charge acts as a resistor to resist voltage spikes
 	uint8_t precharge_closing;
 	uint8_t precharge_error;
-	uint8_t contactor_close;
+	uint8_t contactor_close; // 0 is open, 1 is closed
 	uint8_t contactor_closing;
 	uint8_t contactor_error;
 	uint8_t contactor_opening_error;

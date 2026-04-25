@@ -72,11 +72,14 @@ extern osEventFlagsId_t shutoffFlagHandle;
 extern const osEventFlagsAttr_t shutoffFlag_attributes;
 
 extern osMutexId_t MBMSTripMutexHandle;
+extern osMutexId_t MBMSSoftTripMutexHandle;
 extern osMutexId_t BatteryInfoMutexHandle;
 extern osMutexId_t ContactorInfoMutexHandle;
 extern osMutexId_t BatteryInfoMutexHandle;
 extern osMutexId_t ContactorCommandMutexHandle;
 extern osMutexId_t MBMSStatusMutexHandle;
+extern osMutexId_t DCDCStackMutexHandle;
+extern osMutexId_t PermissionsMutexHandle;
 
 /* Exported function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
