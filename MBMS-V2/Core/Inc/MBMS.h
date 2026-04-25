@@ -14,6 +14,11 @@
 #define UPDATING_MUTEX_TIMEOUT 5
 #define READING_MUTEX_TIMEOUT 5
 
+/* Flags   */
+#define SHUTOFF_FLAG 0x01
+#define MPS_FLAG 0x02 //main pwr switch disconnected
+#define HARD_BAT_LIMIT_FLAG 0x04
+
 /* Defines */
 #define OPEN_CONTACTOR 0
 #define CLOSE_CONTACTOR 1
@@ -44,6 +49,18 @@ enum Contactors{
 	CHARGE
 };
 
+enum startupStates {
+	nMPS_ENABLED = 0,
+	nMPS_DISABLED,
+	ESD_DISABLED,
+	CHECKS_PASSED,
+	COMMON_CLOSED,
+	LV_CLOSED,
+	EN1_ON,
+	MOTORS_PERMS,
+	ARRAY_PERMS,
+	COMPLETED
+};
 
 enum carStates {
 	BOOT,

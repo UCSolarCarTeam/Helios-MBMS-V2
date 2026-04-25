@@ -167,7 +167,7 @@ static void Startup_Flowchart(void)
      * Enable DCDC1 (Aux -> Main battery switching)
      * - Then updates state to record DCDC1 enabled
      * ------------------------------------------------------------------------- */
-    HAL_GPIO_WritePin(DCDC1_EN_GPIO_Port, DCDC1_EN_Pin, DCDC1_ENABLE_LEVEL);
+    HAL_GPIO_WritePin(DCDC1_EN_GPIO_Port, DCDC1_EN_Pin, DCDC1_EN_ACTIVE);
 
     mbmsStatus.Startup_state = STARTUP_DCDC1_ON;
 

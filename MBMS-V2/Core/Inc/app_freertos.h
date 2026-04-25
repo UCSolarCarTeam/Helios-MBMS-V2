@@ -67,6 +67,10 @@ extern osMessageQueueId_t canRxQueueHandle;
 extern osMessageQueueId_t ContactorQueueHandle;
 extern osMessageQueueId_t BatteryQueueHandle;
 
+//Event Flags
+extern osEventFlagsId_t shutoffFlagHandle;
+extern const osEventFlagsAttr_t shutoffFlag_attributes;
+
 extern osMutexId_t MBMSTripMutexHandle;
 extern osMutexId_t BatteryInfoMutexHandle;
 extern osMutexId_t ContactorInfoMutexHandle;

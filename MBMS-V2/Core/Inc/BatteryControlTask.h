@@ -27,9 +27,11 @@
 
 
 #define MINIMUM_ORION_MESSAGE_RECEIVED 5
-#define MPS_ACTIVE_LEVEL 1 // MPS CLOSED - have power
-#define ESD_ACTIVE_LEVEL 1 // ESD PRESSED - BPS
-#define DCDC1_ENABLE_LEVEL 1 // DCDC1 is enabled
+
+// delete below, i made active states in read gpio header
+//#define MPS_ACTIVE_LEVEL 1 // MPS CLOSED - have power
+//#define ESD_ACTIVE_LEVEL 1 // ESD PRESSED - BPS
+//#define DCDC1_ENABLE_LEVEL 1 // DCDC1 is enabled
 
 /* E.g. Temp Info is sent at 5Hz from OBMS which means one msg every 0.2 seconds
  * BCT runs one cycle every 10 ticks, (1 tick every millisecond), so every 10 ms
