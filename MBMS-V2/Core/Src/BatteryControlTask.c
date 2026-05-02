@@ -55,7 +55,7 @@ void MBMSStatus_init(void)
 
 
 
-
+// mutexes look good here
 void perms_init()
 {
     // Reset all system permissions to safe defaults.
@@ -188,6 +188,12 @@ void enter_BOOT()
 
 }
 
+
+// NOTE: actually check stuff that runs "once" bc if it skips the faulted step that kinda bad icl...
+// e.g. if it only calls this function once kinda thing.. idk ... etc.
+// prob relevant for all enter funcs and idk what else
+// BUT ALSOOOOOOO like should prob be ok if literally nothing else is updating perms (minus startup)
+// just check i guess !
 void enter_MPS_DISCONNECTED()
 {
 	//mbmsHardTrips
@@ -318,7 +324,7 @@ uint8_t waitForFirstHeartbeats()
 
 		// case that heartbeat update has timed out
 		// This checks whether the heartbeat did not increase.
-		osStatus_t ContactorInfo_a2 = osMutexAcquire(ContactorInfoMutexHandle, UPDATING_MUTEX_TIMEOUT );
+		osStatus_t ContactorInfo_a2 = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT );
 		if(ContactorInfo_a2 == osOK)
 		{
 			if(previousHeartbeats[i] >= contactorInfo[i].heartbeat)
@@ -332,12 +338,16 @@ uint8_t waitForFirstHeartbeats()
 			}
 			osMutexRelease(ContactorInfoMutexHandle);
 		}
+
+		// NOTE / FIX: lowkey this kinda wrong cuz the else is for the if statement getting mutex now..
+		// can prob manually do like.. if prev hb  < contactorInfo hb
+
 		// If the heartbeat did increase, the controller is alive. (Updates the last heartbeat time, Resets the failure counter, Stores the new heartbeat value)
 		else
 		{
 			heartbeatLastUpdatedTime[i] = osKernelGetTickCount();
 			heartbeatFailCounter[i] = 0;
-			osStatus_t ContactorInfo_a3 = osMutexAcquire(ContactorInfoMutexHandle, UPDATING_MUTEX_TIMEOUT );
+			osStatus_t ContactorInfo_a3 = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT );
 			if(ContactorInfo_a3 == osOK)
 			{
 				previousHeartbeats[i] = (contactorInfo[i].heartbeat);
@@ -353,12 +363,13 @@ uint8_t waitForFirstHeartbeats()
 
 
 
-
+// TODO/ FIX  lowkey what abt mbmshardtrips mutex ? especially cuz updating so lowkey more important
+// ik nested mutexes tho so be very very careful.....
 
 uint8_t startupBatteryCheck()
 {
     uint8_t pass = 1;
-	osStatus_t Batteryinfoa1 = osMutexAcquire(BatteryInfoMutexHandle, UPDATING_MUTEX_TIMEOUT );
+	osStatus_t Batteryinfoa1 = osMutexAcquire(BatteryInfoMutexHandle, READING_MUTEX_TIMEOUT );
 	if(Batteryinfoa1 == osOK)
 	{
 
@@ -425,7 +436,7 @@ uint8_t checkContactorsOpen()
 	uint8_t pass = 1;
     for (int i = 0; i < NUM_OF_CNTR; i++)
     {
-		osStatus_t ContactorInfo_a5 = osMutexAcquire(ContactorInfoMutexHandle, UPDATING_MUTEX_TIMEOUT );
+		osStatus_t ContactorInfo_a5 = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT );
 		if(ContactorInfo_a5 == osOK)
 		{
 			if (contactorInfo[i].contactor_close == CLOSE_CONTACTOR)
@@ -481,10 +492,12 @@ void SystemStateMachine()
 
 		if(read_ESD() == ESD_ACTIVE)
 		{
+			// TODO FIX need mutex here maybe idk?
 			mbmsHardTrips.ESD_trip = 1;
+
 			enter_BPS_FAULT();
 		}
-		osStatus_t MBMSTrip_a3 = osMutexAcquire(MBMSStatusMutexHandle, UPDATING_MUTEX_TIMEOUT );
+		osStatus_t MBMSTrip_a3 = osMutexAcquire(MBMSStatusMutexHandle, READING_MUTEX_TIMEOUT );
 		if(MBMSTrip_a3 == osOK)
 		{
 			if(mbmsStatus.Startup_state == COMPLETED)
@@ -511,10 +524,15 @@ void SystemStateMachine()
 			{
 				mbmsPermissions.lv = 0;
 				mbmsPermissions.motor = 0;
-				HAL_GPIO_WritePin(_12V_CAN_State_GPIO_Port, _12V_CAN_State_Pin, GPIO_PIN_RESET); //12V CAN Disabled
 				osMutexRelease(PermissionsMutexHandle);
 			}
+			HAL_GPIO_WritePin(_12V_CAN_State_GPIO_Port, _12V_CAN_State_Pin, GPIO_PIN_RESET); //12V CAN Disabled
+
 		}
+
+		// TODO NOTE THIS IS NESTED MUTEX make sure its ok
+		// contactor info, then perms ... ALTHO ACTUALLY IT WAITS FOR BOTH AT SAME TIME WHICH IS RLY NICE
+		// AND SMART SO TBH I THINK THIS WORKS ? sooo nice:D
 		osStatus_t ContactorInfo_a6 = osMutexAcquire(ContactorInfoMutexHandle, UPDATING_MUTEX_TIMEOUT );
 		osStatus_t Permissions_a6 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
 		if(ContactorInfo_a6 == osOK && Permissions_a6 == osOK)
@@ -524,6 +542,14 @@ void SystemStateMachine()
 				HAL_GPIO_WritePin(_14V_Charge_EN_GPIO_Port, _14V_Charge_EN_Pin, CHARGE_ENABLE_ACTIVE); //ENABLE THE CHARGER
 				mbmsPermissions.charge = 1;
 			}
+			osMutexRelease(ContactorInfoMutexHandle);
+			osMutexRelease(PermissionsMutexHandle);
+		}
+		// i lowkey split these into 2 chunks tho heh
+		osStatus_t ContactorInfo_a7 = osMutexAcquire(ContactorInfoMutexHandle, UPDATING_MUTEX_TIMEOUT );
+		osStatus_t Permissions_a7 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
+		if(ContactorInfo_a7 == osOK && Permissions_a7 == osOK)
+		{
 
 			if(plugged && (contactorInfo[CHARGE].contactor_close == CLOSE_CONTACTOR))
 			{
@@ -551,8 +577,8 @@ void SystemStateMachine()
 		if( !plugged && (read_Discharge_EN() == DISCHARGE_ENABLE_ACTIVE))
 		{
 			HAL_GPIO_WritePin(_14V_Charge_EN_GPIO_Port, _14V_Charge_EN_Pin, !_14V_CHARGE_EN_ACTIVE); //Discharge THE CHARGER
-			osStatus_t Permissions_a7 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
-			if(Permissions_a7 == osOK)
+			osStatus_t Permissions_a8 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
+			if(Permissions_a8 == osOK)
 			{
 				mbmsPermissions.charge = 0;
 				osMutexRelease(PermissionsMutexHandle);
@@ -560,8 +586,8 @@ void SystemStateMachine()
 		}
 
 		// once charge cntr is opened, close 12V CAN pchg
-		osStatus_t ContactorInfo_a7 = osMutexAcquire(ContactorInfoMutexHandle, UPDATING_MUTEX_TIMEOUT );
-		if(ContactorInfo_a7 == osOK)
+		osStatus_t ContactorInfo_a8 = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT );
+		if(ContactorInfo_a8 == osOK)
 		{
 			if(contactorInfo[CHARGE].contactor_close == OPEN_CONTACTOR)
 			{
@@ -579,8 +605,8 @@ void SystemStateMachine()
 		// once 12V CAN fully enabled, enable LV & motor
 		if (read_12V_CAN_EN() == _12V_CAN_EN_ACTIVE)
 		{
-			osStatus_t Permissions_a8 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
-			if(Permissions_a8 == osOK)
+			osStatus_t Permissions_a9 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
+			if(Permissions_a9 == osOK)
 			{
 				mbmsPermissions.lv = 1;
 				mbmsPermissions.motor = 1;
@@ -589,8 +615,8 @@ void SystemStateMachine()
 		}
 
 		// finally, car becomes fully op
-		osStatus_t ContactorInfo_a8 = osMutexAcquire(ContactorInfoMutexHandle, UPDATING_MUTEX_TIMEOUT );
-		if(ContactorInfo_a8 == osOK)
+		osStatus_t ContactorInfo_a9 = osMutexAcquire(ContactorInfoMutexHandle, UPDATING_MUTEX_TIMEOUT );
+		if(ContactorInfo_a9 == osOK)
 		{
 			if((contactorInfo[LV].contactor_close == CLOSE_CONTACTOR) && (contactorInfo[MOTOR].contactor_close == CLOSE_CONTACTOR))
 			{
@@ -612,9 +638,10 @@ void SystemStateMachine()
 		break;
 
 	case SOFT_TRIP:
-		osStatus_t softtripa1 = osMutexAcquire(MBMSSoftTripMutexHandle, UPDATING_MUTEX_TIMEOUT );
-		osStatus_t Permissions_a9 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
-		if(softtripa1 == osOK && Permissions_a9 == osOK)
+		// NOTE nested again but like not rly, i think this is good !!!
+		osStatus_t softtripa1 = osMutexAcquire(MBMSSoftTripMutexHandle, READING_MUTEX_TIMEOUT );
+		osStatus_t Permissions_a10 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
+		if(softtripa1 == osOK && Permissions_a10 == osOK)
 		{
 			if(mbmsSoftTrips.High_volt_cell_Strip == 1)
 			{
@@ -651,17 +678,18 @@ void Control_Contactors()
 	//check if any of the contactors are closed
 	for (int i = 0; i < NUM_OF_CNTR; i++)
 	{
-		osStatus_t ContactorInfo_a9 = osMutexAcquire(ContactorInfoMutexHandle, UPDATING_MUTEX_TIMEOUT );
+		osStatus_t ContactorInfo_a9 = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT );
 		if(ContactorInfo_a9 == osOK)
 		{
 			if (contactorInfo[i].contactor_closing == CLOSING_CONTACTOR)
 			{
-			contactorClosing = true;
-			break;
+				contactorClosing = true;
 			}
-			osMutexRelease(ContactorInfoMutexHandle);
 		}
+		osMutexRelease(ContactorInfoMutexHandle);
 	}
+
+
 	osStatus_t ContactorInfo_a10 = osMutexAcquire(ContactorInfoMutexHandle, UPDATING_MUTEX_TIMEOUT );
 	osStatus_t Permissions_a10 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
 	osStatus_t ContactorCommand_a1 = osMutexAcquire(ContactorCommandMutexHandle, UPDATING_MUTEX_TIMEOUT );
@@ -691,6 +719,7 @@ void Control_Contactors()
 		osMutexRelease(PermissionsMutexHandle);
 		osMutexRelease(ContactorCommandMutexHandle);
 	}
+
 	osStatus_t Permissions_a11 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
 	osStatus_t ContactorCommand_a2 = osMutexAcquire(ContactorCommandMutexHandle, UPDATING_MUTEX_TIMEOUT );
 	if(Permissions_a11 == osOK && ContactorCommand_a2 == osOK)
@@ -725,6 +754,7 @@ void Update_TripStruct()
 {
 	static uint8_t BPS_Fault = 0;
 
+	// TODO / NOTE / FIX just note this is nested mutexes maybe change to ur other strat?
 	osStatus_t MBMSTrip_a1 = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
 	if(MBMSTrip_a1 == osOK)
 	{
@@ -953,6 +983,7 @@ void Update_ContactorInfoStruct() {
 		uint8_t 	contactorOpeningError 	= (data[0] >> 6) & 0x1;
 		int16_t 	lineCurrent 			= ((data[0] & 0x80) >> 7) | (data[1] << 1) | ((data[2] & 0x07) << 9); // extract bits 7 to 18
 		int16_t 	chargeCurrent 			= ((data[2] & 0xF8) >> 3) | ((data[3] & 0x7F) >> 6); // extract bits 19 to 30
+
 		osStatus_t ContactorInfo_a12 = osMutexAcquire(ContactorInfoMutexHandle, UPDATING_MUTEX_TIMEOUT );
 		if(ContactorInfo_a12 == osOK)
 		{
@@ -968,7 +999,9 @@ void Update_ContactorInfoStruct() {
 			osMutexRelease(ContactorInfoMutexHandle);
 		}
 
-    }														// This is where we split the messages into heartbeat or board
+    }
+
+    // This is where we split the messages into heartbeat or board
     // if the msg is a contactor heartbeat msg. We split them again into which heartbeat CCP it is
     else
     {
