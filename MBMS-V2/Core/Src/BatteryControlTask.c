@@ -297,24 +297,26 @@ uint8_t waitForFirstHeartbeats()
 		// case that a ccp heartbeat has died
 		if (heartbeatFailCounter[i] > MAX_HEARTBEAT_FAILS)
 		{
-			// TODO ADD MUTEX HERE
-			// from enum
-			switch (i)
+			osStatus_t MBMSTrip_a6 = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
+			if(MBMSTrip_a6 == osOK)
 			{
-				case LV:
-					mbmsHardTrips.LV_no_heartbeat_trip = 1;
-					break;
-				case MOTOR:
-					mbmsHardTrips.MT_no_heartbeat_trip = 1;
-					break;
-				case ARRAY:
-					mbmsHardTrips.AR_no_heartbeat_trip = 1;
-					break;
-				case CHARGE:
-					mbmsHardTrips.CHG_no_heartbeat_trip = 1;
-					break;
+				switch (i)
+				{
+					case LV:
+						mbmsHardTrips.LV_no_heartbeat_trip = 1;
+						break;
+					case MOTOR:
+						mbmsHardTrips.MT_no_heartbeat_trip = 1;
+						break;
+					case ARRAY:
+						mbmsHardTrips.AR_no_heartbeat_trip = 1;
+						break;
+					case CHARGE:
+						mbmsHardTrips.CHG_no_heartbeat_trip = 1;
+						break;
+				}
+				osMutexRelease(MBMSTripMutexHandle);
 			}
-			// TODO END ADD MUTEX HERE
 
 			dead = 1;
 			return dead;
@@ -373,7 +375,8 @@ uint8_t startupBatteryCheck()
 {
     uint8_t pass = 1;
 	osStatus_t Batteryinfoa1 = osMutexAcquire(BatteryInfoMutexHandle, READING_MUTEX_TIMEOUT );
-	if(Batteryinfoa1 == osOK)
+	osStatus_t MBMSTrip_a7 = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
+	if(Batteryinfoa1 == osOK && MBMSTrip_a7 == osOK)
 	{
 
 		if (batteryInfo.highCellVoltage > HARD_MAX_CELL_VOLTAGE)
@@ -400,6 +403,7 @@ uint8_t startupBatteryCheck()
 			pass = 0;
 		}
 		osMutexRelease(BatteryInfoMutexHandle);
+		osMutexRelease(MBMSTripMutexHandle);
 	}
 
     startup_Check_Counter++;
@@ -497,10 +501,14 @@ void SystemStateMachine()
 
 		if(read_ESD() == ESD_ACTIVE)
 		{
-			// TODO FIX need mutex here for trips !
-			mbmsHardTrips.ESD_trip = 1;
+			osStatus_t MBMSTrip_a8 = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
+			if(MBMSTrip_a8 == osOK)
+			{
+				mbmsHardTrips.ESD_trip = 1;
 
-			enter_BPS_FAULT();
+				enter_BPS_FAULT();
+			}
+			osMutexRelease(MBMSTripMutexHandle);
 		}
 		osStatus_t MBMSTrip_a1 = osMutexAcquire(MBMSStatusMutexHandle, READING_MUTEX_TIMEOUT );
 		if(MBMSTrip_a1 == osOK)
@@ -761,8 +769,6 @@ void Update_TripStruct()
 {
 	static uint8_t BPS_Fault = 0;
 
-	// TODO / NOTE / FIX just note this is nested mutexes maybe change to ur other strat?
-	// AWESOME LOOKS GREAT NOW !!! :D u can delete these comments lol
 	osStatus_t MBMSTrip_a2 = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
 	osStatus_t ContactorInfo_a11 = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT );
 	osStatus_t Batteryinfoa2 = osMutexAcquire(BatteryInfoMutexHandle, READING_MUTEX_TIMEOUT );
@@ -805,48 +811,50 @@ void Update_TripStruct()
 			mbmsHardTrips.Reverse_cur_trip = 1;
 			BPS_Fault = 1;
 		}
-
-		// TODO i would lowkey release all the mutexes here icl and then do a new block of just
-		// getting the battery info and mbms trip mutexes for this following block
-		// just so we can free up the contactor info mutex cuz we not using it here !
-
-
-		// Checking Battery Related Trips!!
-		if(batteryInfo.highCellVoltage > HARD_MAX_CELL_VOLTAGE)
-		{
-			mbmsHardTrips.High_volt_cell_trip = 1;
-			BPS_Fault = 1;
-		}
-
-		if(batteryInfo.lowCellVoltage < HARD_MIN_CELL_VOLTAGE)
-		{
-			mbmsHardTrips.Low_volt_cell_trip = 1;
-			BPS_Fault = 1;
-		}
-
-		if(batteryInfo.highTemp > HARD_MAX_TEMP)
-		{
-			mbmsHardTrips.High_temp_trip = 1;
-			BPS_Fault = 1;
-		}
-
-		if(batteryInfo.lowTemp < HARD_MIN_TEMP)
-		{
-			mbmsHardTrips.Low_temp_trip = 1;
-			BPS_Fault = 1;
-		}
-
-	    // Checking Missing Orion Messages Trip
-		//if orion CAN msg wasnt received recently, trip set
-		if(!(mbmsStatus.OBMS_CAN_RR))
-		{
-			mbmsHardTrips.OBMS_msg_timeout_trip = 1;
-			BPS_Fault = 1;
-		}
-
-		// TODO and then end the new set of mutexes here instead :D
 		osMutexRelease(MBMSTripMutexHandle);
 		osMutexRelease(ContactorInfoMutexHandle);
+		osMutexRelease(BatteryInfoMutexHandle);
+	}
+
+
+	osStatus_t MBMSTrip_a9 = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
+	osStatus_t Batteryinfoa3 = osMutexAcquire(BatteryInfoMutexHandle, READING_MUTEX_TIMEOUT );
+	if(MBMSTrip_a9 == osOK && Batteryinfoa3 ==osOK)
+		{
+			// Checking Battery Related Trips!!
+			if(batteryInfo.highCellVoltage > HARD_MAX_CELL_VOLTAGE)
+			{
+				mbmsHardTrips.High_volt_cell_trip = 1;
+				BPS_Fault = 1;
+			}
+
+			if(batteryInfo.lowCellVoltage < HARD_MIN_CELL_VOLTAGE)
+			{
+				mbmsHardTrips.Low_volt_cell_trip = 1;
+				BPS_Fault = 1;
+			}
+
+			if(batteryInfo.highTemp > HARD_MAX_TEMP)
+			{
+				mbmsHardTrips.High_temp_trip = 1;
+				BPS_Fault = 1;
+			}
+
+			if(batteryInfo.lowTemp < HARD_MIN_TEMP)
+			{
+				mbmsHardTrips.Low_temp_trip = 1;
+				BPS_Fault = 1;
+			}
+
+	    	// Checking Missing Orion Messages Trip
+			//if orion CAN msg wasnt received recently, trip set
+			if(!(mbmsStatus.OBMS_CAN_RR))
+			{
+				mbmsHardTrips.OBMS_msg_timeout_trip = 1;
+				BPS_Fault = 1;
+			}
+
+		osMutexRelease(MBMSTripMutexHandle);
 		osMutexRelease(BatteryInfoMutexHandle);
 	}
 
@@ -894,11 +902,17 @@ void Update_TripStruct()
 		osMutexRelease(MBMSTripMutexHandle);
 	}
 
-	// TODO need trip mutex here
-	// Check ESD
-	if (read_ESD() == ESD_ACTIVE) {
-		mbmsHardTrips.ESD_trip = 1;
-		BPS_Fault = 1;
+
+	osStatus_t MBMSTrip_a11 = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
+	if(MBMSTrip_a11 == osOK)
+	{
+		// Check ESD
+		if (read_ESD() == ESD_ACTIVE)
+		{
+			mbmsHardTrips.ESD_trip = 1;
+			BPS_Fault = 1;
+		}
+		osMutexRelease(MBMSTripMutexHandle);
 	}
 
 	// check main & common cntr !!!
@@ -928,13 +942,17 @@ void Check_ContactorHeartbeats() {
 /*-------------------------------------------*/
 
 
-// TODO need mutex here
+
 // Had to use AI for these bottom functions:
 void clear_Trips()
 {
-    /* Reset all hard trip flags to 0 */
-    memset(&mbmsHardTrips, 0, sizeof(MBMS_Hard_Trips));
-
+	osStatus_t MBMSTrip_a5 = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
+	if(MBMSTrip_a5 == osOK)
+	{
+		/* Reset all hard trip flags to 0 */
+		memset(&mbmsHardTrips, 0, sizeof(MBMS_Hard_Trips));
+	}
+	osMutexRelease(MBMSTripMutexHandle);
 }
 
 

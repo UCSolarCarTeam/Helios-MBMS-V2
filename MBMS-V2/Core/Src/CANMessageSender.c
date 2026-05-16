@@ -120,7 +120,7 @@ void send_ContactorCommand()
 	contactorCommandMsg.DLC			= 1;
 	contactorCommandMsg.extendedID	= CONTACTOR_COMMAND_ID;
 	contactorCommandMsg.ID			= 0x0;
-	osStatus_t acquire_1 = osMutexAcquire(ContactorCommandMutexHandle, UPDATING_MUTEX_TIMEOUT);
+	osStatus_t acquire_1 = osMutexAcquire(ContactorCommandMutexHandle, READING_MUTEX_TIMEOUT);
 	if(acquire_1 == osOK)
 	{
 		contactorCommandMsg.data[0]		= ((contactorCommand.LV & 0x01) << LV)		+
@@ -137,7 +137,7 @@ void send_MBMSStatus()
 {
 	CANmsg mbmsStatusMsg;
 	uint16_t mbmsStatusData;
-	osStatus_t acquire_2 = osMutexAcquire(MBMSStatusMutexHandle, UPDATING_MUTEX_TIMEOUT);
+	osStatus_t acquire_2 = osMutexAcquire(MBMSStatusMutexHandle, READING_MUTEX_TIMEOUT);
 	if(acquire_2 == osOK)
 	{
 		mbmsStatusData = ((mbmsStatus.BPS_Fault & 0x01) << 0) + ((mbmsStatus.charge_safety & 0x1) << 1)
@@ -163,7 +163,7 @@ void send_DCDCStack()
 {
 	CANmsg DCDCStackMsg;
 	uint16_t data;
-	osStatus_t acquire_3 = osMutexAcquire(DCDCStackMutexHandle, UPDATING_MUTEX_TIMEOUT);
+	osStatus_t acquire_3 = osMutexAcquire(DCDCStackMutexHandle, READING_MUTEX_TIMEOUT);
 	if(acquire_3 == osOK)
 	{
 		data = ((dcdc_stack.DCDC1_en & 0x1) << 0) + ((dcdc_stack._14V_Charge_EN & 0x1) << 1)
@@ -183,7 +183,7 @@ void send_MBMSSoftTrips()
 {
 	CANmsg tripMsg;
 	uint16_t tripData;
-	osStatus_t acquire_4 = osMutexAcquire(MBMSSoftTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
+	osStatus_t acquire_4 = osMutexAcquire(MBMSSoftTripMutexHandle, READING_MUTEX_TIMEOUT);
 	if(acquire_4 == osOK)
 	{
 		tripData = ((mbmsSoftTrips.High_volt_cell_Strip & 0x1) << 0)   	+ ((mbmsSoftTrips.Low_volt_cell_Strip & 0x1) << 1)
@@ -207,7 +207,7 @@ void send_MBMSTrips()
 {
 	CANmsg tripMsg;
 	uint16_t tripData;
-	osStatus_t acquire_5 = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
+	osStatus_t acquire_5 = osMutexAcquire(MBMSTripMutexHandle, READING_MUTEX_TIMEOUT);
 	if(acquire_5 == osOK)
 	{
 		tripData = ((mbmsHardTrips.High_volt_cell_trip & 0x1) << 0)   		  +	((mbmsHardTrips.Low_volt_cell_trip & 0x1) << 1)
