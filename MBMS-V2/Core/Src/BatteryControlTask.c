@@ -3,7 +3,7 @@
 #include "cmsis_os.h"
 #include "cmsis_os2.h"
 #include "CAN.h"
-//#include "StartupTask.h"
+#include "StartupTask.h"
 //#include "ShutoffTask.h"
 #include "ReadGPIO.h"
 //#include "CANMessageSenderTask.h"
@@ -21,6 +21,7 @@ uint32_t BCT_Counter = 0;
 uint32_t startup_Check_Counter = 0;
 uint8_t carState = BOOT;
 
+// creates a struct that stores information about one part of the system
 Contactor_Info contactorInfo[NUM_OF_CNTR] = {0};
 MBMS_Status mbmsStatus;
 Battery_Info batteryInfo;
@@ -29,7 +30,6 @@ MBMS_Soft_Trips mbmsSoftTrips;
 Permissions mbmsPermissions;
 Contactor_Command contactorCommand;
 DCDC_Stack dcdc_stack;
-
 
 uint32_t heartbeat_enter_SOFT_TRIP_count = 0;
 uint16_t previousHeartbeats[NUM_OF_CNTR] = {0};
@@ -40,6 +40,7 @@ uint32_t temp_info_counter = 0;
 uint32_t cell_voltages_counter = 0;
 
 static uint32_t missingOBMS_MsgCounter = 0;
+
 
 
 void MBMSStatus_init(void)
@@ -132,6 +133,7 @@ void BatteryControl() {
 }
 
 
+
 /* ------ System State Switching Functions ------ */
 
 void enter_BOOT()
@@ -158,11 +160,8 @@ void enter_BOOT()
 
     /* 6. Reset Counters */
     BCT_Counter = 0;
-
     missingOBMS_MsgCounter = 0;
-
     startup_Check_Counter = 0;
-
 	pack_info_counter = 0;
 	temp_info_counter = 0;
 	cell_voltages_counter = 0;
@@ -196,6 +195,9 @@ void enter_BOOT()
 // prob relevant for all enter funcs and idk what else
 // BUT ALSOOOOOOO like should prob be ok if literally nothing else is updating perms (minus startup)
 // just check i guess !
+
+
+
 void enter_MPS_DISCONNECTED()
 {
 	//mbmsHardTrips
@@ -208,6 +210,10 @@ void enter_MPS_DISCONNECTED()
 	}
 	osEventFlagsSet(shutoffFlagHandle, (MPS_FLAG | SHUTOFF_FLAG)); //idk if I understnad this
 }
+
+
+
+
 
 void enter_BPS_FAULT()
 {
@@ -230,6 +236,10 @@ void enter_BPS_FAULT()
 	osEventFlagsSet(shutoffFlagHandle, (HARD_BAT_LIMIT_FLAG | SHUTOFF_FLAG));
 }
 
+
+
+
+
 void enter_SOFT_TRIP()
 {
 	carState = SOFT_TRIP;
@@ -241,10 +251,16 @@ void enter_SOFT_TRIP()
 	}
 }
 
+
+
+
 void enter_CHARGING()
 {
 	carState = CHARGING;
 }
+
+
+
 
 void enter_FULLY_OPERATIONAL()
 {
@@ -253,7 +269,7 @@ void enter_FULLY_OPERATIONAL()
 
 
 
-/*-------------------------------------------*/
+
 /* Startup enter_SOFT_TRIPs */
 void startupCheck() // change after this function is done: waitForFirstHeartbeats
 {
@@ -460,14 +476,15 @@ uint8_t checkContactorsOpen()
 }
 
 
-/* ----------------------- */
+
+
 
 /* ------ Main Control Functions ----- */
 
 void SystemStateMachine()
 {
 	// Make  is plugged in to stand in for the CAN msg
-	uint8_t plugged = read_EVCC_12_SW() == EVCC_12_SW_ACTIVE;
+	uint8_t plugged = read_EVCC_12V_SW() == EVCC_12V_SW_ACTIVE;
 
 	switch (carState)
 	{
@@ -763,10 +780,7 @@ void Control_Contactors()
 
 
 
-/*-------------------------*/
 /*----- Checking for Trips & Strips & Dead Heartbeats Functions -----*/
-
-
 void Update_TripStruct()
 {
 	static uint8_t BPS_Fault = 0;
@@ -934,16 +948,181 @@ void Update_TripStruct()
 
 }
 
-// FAISAL PLEASE IMPLEMENT YOUR FUNCTIONS HERE
-void Update_SoftTripStruct() {
 
+
+
+void Update_SoftTripStruct()
+{
+	uint8_t trip = 0;
+
+	osStatus_t acquire = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
+	if (acquire == osOK)
+	{
+		/* Checking battery-related soft trips */
+		osStatus_t batteryAcquire = osMutexAcquire(BatteryInfoMutexHandle, READING_MUTEX_TIMEOUT);
+		if (batteryAcquire == osOK)
+		{
+			if (batteryInfo.highCellVoltage > SOFT_MAX_CELL_VOLTAGE)
+			{
+				mbmsSoftTrips.High_volt_cell_Strip = 1;
+				trip = 1;
+			}
+
+			if (batteryInfo.lowCellVoltage < SOFT_MIN_CELL_VOLTAGE)
+			{
+				mbmsSoftTrips.Low_volt_cell_Strip = 1;
+				trip = 1;
+			}
+
+			if (batteryInfo.highTemp > SOFT_MAX_TEMP)
+			{
+				mbmsSoftTrips.High_temp_Strip = 1;
+				trip = 1;
+			}
+
+			if (batteryInfo.lowTemp < SOFT_MIN_TEMP)
+			{
+				mbmsSoftTrips.Low_temp_Strip = 1;
+				trip = 1;
+			}
+
+			if (batteryInfo.packCurrent > SOFT_MAX_COMMON_CONTACTOR_CURRENT)
+			{
+				mbmsSoftTrips.CMN_high_cur_Strip = 1;
+				trip = 1;
+			}
+
+			osMutexRelease(BatteryInfoMutexHandle);
+		}
+
+		/* Checking contactor high-current soft trips */
+		osStatus_t contactorAcquire = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT);
+		if (contactorAcquire == osOK)
+		{
+			if (contactorInfo[MOTOR].line_current > SOFT_MAX_MOTORS_CONTACTOR_CURRENT)
+			{
+				mbmsSoftTrips.MT_high_cur_Strip = 1;
+				trip = 1;
+			}
+
+			if (contactorInfo[ARRAY].line_current > SOFT_MAX_ARRAY_CONTACTOR_CURRENT)
+			{
+				mbmsSoftTrips.AR_high_cur_Strip = 1;
+				trip = 1;
+			}
+
+			if (contactorInfo[LV].line_current > SOFT_MAX_LV_CONTACTOR_CURRENT)
+			{
+				mbmsSoftTrips.LV_high_cur_Strip = 1;
+				trip = 1;
+			}
+
+			if (contactorInfo[CHARGE].line_current > SOFT_MAX_CHARGE_CONTACTOR_CURRENT)
+			{
+				mbmsSoftTrips.CHG_high_cur_Strip = 1;
+				trip = 1;
+			}
+
+			osMutexRelease(ContactorInfoMutexHandle);
+		}
+
+		osMutexRelease(MBMSTripMutexHandle);
+	}
+
+	if (trip == 1)
+	{
+		enter_SOFT_TRIP();
+	}
 }
 
-void Check_ContactorHeartbeats() {
 
+
+
+void Check_ContactorHeartbeats()
+{
+
+	static uint8_t BPS_Fault = 0;
+
+	for (int i = 0; i < NUM_OF_CNTR; i++)
+	{
+		// Case where the heartbeat counter reaches its max value
+		if (previousHeartbeats[i] >= 65535) // 2 bytes
+		{
+			previousHeartbeats[i] = 0;
+		}
+
+		osStatus_t contactorAcquire = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT); // HELEYNA CHECK THIS
+
+		if (contactorAcquire == osOK)
+		{
+			// Check if the heartbeat has not increased since the last check
+			if (previousHeartbeats[i] >= contactorInfo[i].heartbeat)
+			{
+				// Calculate how long this heartbeat has been unchanged.
+				uint32_t difference_ticks = osKernelGetTickCount() - heartbeatLastUpdatedTime[i];
+				float difference_ms = (float) difference_ticks;
+
+				// If the heartbeat is stuck past the timeout, set the matching hard trip
+				if (difference_ms > CONTACTOR_HEARTBEAT_TIMEOUT)
+				{
+					osMutexRelease(ContactorInfoMutexHandle);
+
+					osStatus_t tripAcquire = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
+
+					// Set the no-heartbeat hard trip for the failed contactor board.
+					if (tripAcquire == osOK)
+					{
+						switch (i)
+						{
+							case LV:
+								mbmsHardTrips.LV_no_heartbeat_trip = 1;
+								break;
+
+							case MOTOR:
+								mbmsHardTrips.MT_no_heartbeat_trip = 1;
+								break;
+
+							case ARRAY:
+								mbmsHardTrips.AR_no_heartbeat_trip = 1;
+								break;
+
+							case CHARGE:
+								mbmsHardTrips.CHG_no_heartbeat_trip = 1;
+								break;
+
+							default:
+								break;
+						}
+
+						osMutexRelease(MBMSTripMutexHandle);
+						BPS_Fault = 1;
+					}
+				}
+				else
+				{
+					osMutexRelease(ContactorInfoMutexHandle);
+				}
+			}
+			else
+			{
+				// Heartbeat increased, so update the last-seen time and value.
+				heartbeatLastUpdatedTime[i] = osKernelGetTickCount();
+				previousHeartbeats[i] = contactorInfo[i].heartbeat;
+
+				osMutexRelease(ContactorInfoMutexHandle);
+			}
+		}
+	}
+	// Enter BPS fault state if any contactor heartbeat timed out.
+	if (BPS_Fault)
+	{
+		enter_BPS_FAULT();
+	}
 }
 
-/*-------------------------------------------*/
+
+
+
 
 
 

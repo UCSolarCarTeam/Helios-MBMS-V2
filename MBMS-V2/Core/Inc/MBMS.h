@@ -27,7 +27,7 @@
 #define NUM_OF_CNTR 4
 #define CONTACTOR_HEARTBEAT_TIMEOUT 1500 // milliseconds
 #define MAX_HEARTBEAT_FAILS 3
-
+// define here..
 #define FREERTOS_TICK_PERIOD 1.0/configTICK_RATE_HZ
 // there are 1000 ticks per second btw
 // so there is 1 tick every 1 millisecond
