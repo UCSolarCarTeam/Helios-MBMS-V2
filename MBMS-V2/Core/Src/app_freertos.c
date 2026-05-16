@@ -125,6 +125,11 @@ const osMutexAttr_t MBMSTripMutex_attributes = {
 		.name = "MBMSTripMutex",
 		.attr_bits = osMutexPrioInherit,
 };
+osMutexId_t MBMSSoftTripMutexHandle;
+const osMutexAttr_t MBMSSoftTripMutex_attributes = {
+		.name = "MBMSSoftTripMutex",
+		.attr_bits = osMutexPrioInherit,
+};
 
 osMutexId_t ContactorInfoMutexHandle;
 const osMutexAttr_t ContactorInfoMutex_attributes = {
@@ -147,6 +152,18 @@ const osMutexAttr_t MBMSStatusMutex_attributes = {
 osMutexId_t ContactorCommandMutexHandle;
 const osMutexAttr_t ContactorCommandMutex_attributes = {
       .name = "ContactorCommandMutex",
+      .attr_bits = osMutexPrioInherit,
+};
+
+osMutexId_t DCDCStackMutexHandle;
+const osMutexAttr_t DCDCStackMutex_attributes = {
+      .name = "DCDCStackMutex",
+      .attr_bits = osMutexPrioInherit,
+};
+
+osMutexId_t PermissionsMutexHandle;
+const osMutexAttr_t PermissionsMutex_attributes = {
+      .name = "PermissionsMutex",
       .attr_bits = osMutexPrioInherit,
 };
 
@@ -190,11 +207,13 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_MUTEX */
 
 	MBMSTripMutexHandle = osMutexNew(&MBMSTripMutex_attributes);
+	MBMSSoftTripMutexHandle = osMutexNew(&MBMSSoftTripMutex_attributes);
 	ContactorInfoMutexHandle = osMutexNew(&ContactorInfoMutex_attributes);
 	BatteryInfoMutexHandle = osMutexNew(&BatteryInfoMutex_attributes);
 	MBMSStatusMutexHandle = osMutexNew(&MBMSStatusMutex_attributes);
 	ContactorCommandMutexHandle = osMutexNew(&ContactorCommandMutex_attributes);
-
+	DCDCStackMutexHandle = osMutexNew(&DCDCStackMutex_attributes);
+	PermissionsMutexHandle = osMutexNew(&PermissionsMutex_attributes);
   /* USER CODE END RTOS_MUTEX */
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */

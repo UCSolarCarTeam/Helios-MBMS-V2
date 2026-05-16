@@ -45,22 +45,33 @@ static uint32_t missingOBMS_MsgCounter = 0;
 
 void MBMSStatus_init(void)
 {
-    memset(&mbmsStatus, 0, sizeof(mbmsStatus));
-    mbmsStatus.Abatt_EN = 1; // Aux Battery enable
+	osStatus_t MBMSStatus_a1 = osMutexAcquire(MBMSStatusMutexHandle, UPDATING_MUTEX_TIMEOUT );
+	if(MBMSStatus_a1 == osOK)
+	{
+		memset(&mbmsStatus, 0, sizeof(mbmsStatus));
+		mbmsStatus.Abatt_EN = 1;
+		osMutexRelease(MBMSStatusMutexHandle);
+	}
 }
 
 
 
-
+// mutexes look good here
 void perms_init()
 {
     // Reset all system permissions to safe defaults.
     // This prevents the battery from charging or discharging
     // until the startup enter_SOFT_TRIPs are complete.
-	mbmsPermissions.lv = 0;
-	mbmsPermissions.motor = 0;
-	mbmsPermissions.array = 0;
-	mbmsPermissions.charge = 0;
+	osStatus_t Permissions_a1 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
+	if(Permissions_a1 == osOK)
+	{
+		// TODO: set permission variables here
+		mbmsPermissions.lv = 0;
+		mbmsPermissions.motor = 0;
+		mbmsPermissions.array = 0;
+		mbmsPermissions.charge = 0;
+		osMutexRelease(PermissionsMutexHandle);
+	}
 
 }
 
@@ -125,7 +136,8 @@ void BatteryControl() {
 
 /* ------ System State Switching Functions ------ */
 
-void enter_BOOT() {
+void enter_BOOT()
+{
 
     /* 1. Set system state to BOOT */
     carState = BOOT;
@@ -155,21 +167,34 @@ void enter_BOOT() {
 	cell_voltages_counter = 0;
 
 	/* 7. Reset Heartbeats */
-	for(int i = 0; i < NUM_OF_CNTR; i++) {
+	for(int i = 0; i < NUM_OF_CNTR; i++)
+	{
 		previousHeartbeats[i] = 0;
 		heartbeatLastUpdatedTime[i] = 0;
-		contactorInfo[i].heartbeat = 0;
-		/* 8. Make sure contactors open */
-		if (!checkContactorsOpen() || !checkPrechargersOpen())
-	{
-		enter_BPS_FAULT();
-		return;
+		osStatus_t ContactorInfo_a1 = osMutexAcquire(ContactorInfoMutexHandle, UPDATING_MUTEX_TIMEOUT );
+		if(ContactorInfo_a1 == osOK)
+		{
+			contactorInfo[i].heartbeat = 0;
+			osMutexRelease(ContactorInfoMutexHandle);
+		}
 	}
-	}
+
+	// Not too sure if we need this here, cuz have in sys state.... cuz just runs once here
+//	/* 8. Make sure contactors open */
+//	if (!checkContactorsOpen() || !checkPrechargersOpen())
+//	{
+//		enter_BPS_FAULT();
+//		return;
+//	}
 
 }
 
 
+// NOTE: actually check stuff that runs "once" bc if it skips the faulted step that kinda bad icl...
+// e.g. if it only calls this function once kinda thing.. idk ... etc.
+// prob relevant for all enter funcs and idk what else
+// BUT ALSOOOOOOO like should prob be ok if literally nothing else is updating perms (minus startup)
+// just check i guess !
 
 
 
@@ -177,8 +202,13 @@ void enter_MPS_DISCONNECTED()
 {
 	//mbmsHardTrips
 	carState = MPS_DISCONNECTED;
-	mbmsPermissions.faulted = 1; //contactors not allowed to close
-	osEventFlagsSet(shutoffFlagHandle, (MPS_FLAG | SHUTOFF_FLAG));
+	osStatus_t Permissions_a2 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
+	if(Permissions_a2 == osOK)
+	{
+		mbmsPermissions.faulted = 1; //contactors not allowed to close
+		osMutexRelease(PermissionsMutexHandle);
+	}
+	osEventFlagsSet(shutoffFlagHandle, (MPS_FLAG | SHUTOFF_FLAG)); //idk if I understnad this
 }
 
 
@@ -188,15 +218,20 @@ void enter_MPS_DISCONNECTED()
 void enter_BPS_FAULT()
 {
 	HAL_GPIO_WritePin(BPS_Fault_GPIO_Port, BPS_Fault_Pin, BPS_FAULT_ACTIVE); // strobe enabling essentially
-	mbmsPermissions.faulted = 1;
+	osStatus_t Permissions_a3 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
+	if(Permissions_a3 == osOK)
+	{
+		mbmsPermissions.faulted = 1;
+		osMutexRelease(PermissionsMutexHandle);
+	}
 	carState = BPS_FAULT;
 
-	osStatus_t a = osMutexAcquire(MBMSStatusMutexHandle, UPDATING_MUTEX_TIMEOUT);
-	if(a == osOK) {
+	osStatus_t MBMSStatus_a2 = osMutexAcquire(MBMSStatusMutexHandle, UPDATING_MUTEX_TIMEOUT);
+	if(MBMSStatus_a2)
+	{
 		// update mbms status
 		mbmsStatus.BPS_Fault = 1;
 		osMutexRelease(MBMSStatusMutexHandle);
-
 	}
 	osEventFlagsSet(shutoffFlagHandle, (HARD_BAT_LIMIT_FLAG | SHUTOFF_FLAG));
 }
@@ -208,7 +243,12 @@ void enter_BPS_FAULT()
 void enter_SOFT_TRIP()
 {
 	carState = SOFT_TRIP;
-	mbmsPermissions.faulted = 1;
+	osStatus_t Permissions_a4 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
+	if(Permissions_a4 == osOK)
+	{
+		mbmsPermissions.faulted = 1;
+		osMutexRelease(PermissionsMutexHandle);
+	}
 }
 
 
@@ -256,35 +296,42 @@ void startupCheck() // change after this function is done: waitForFirstHeartbeat
 
 
 
-
-
-uint8_t waitForFirstHeartbeats() {
+// Add mutexs around shared variables
+uint8_t waitForFirstHeartbeats()
+{
 
 
 	static uint8_t heartbeatFailCounter[NUM_OF_CNTR] = {0};
 	uint8_t dead = 0;
 
 
-	for(int i = 0; i < NUM_OF_CNTR; i++) {
+	for(int i = 0; i < NUM_OF_CNTR; i++)
+	{
 
 		//heartbeat_check_count++;
 
 		// case that a ccp heartbeat has died
-		if (heartbeatFailCounter[i] > MAX_HEARTBEAT_FAILS) {
-			// from enum
-			switch (i) {
-				case LV:
-					mbmsHardTrips.LV_no_heartbeat_trip = 1;
-					break;
-				case MOTOR:
-					mbmsHardTrips.MT_no_heartbeat_trip = 1;
-					break;
-				case ARRAY:
-					mbmsHardTrips.AR_no_heartbeat_trip = 1;
-					break;
-				case CHARGE:
-					mbmsHardTrips.CHG_no_heartbeat_trip = 1;
-					break;
+		if (heartbeatFailCounter[i] > MAX_HEARTBEAT_FAILS)
+		{
+			osStatus_t MBMSTrip_a1 = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
+			if(MBMSTrip_a1 == osOK)
+			{
+				switch (i)
+				{
+					case LV:
+						mbmsHardTrips.LV_no_heartbeat_trip = 1;
+						break;
+					case MOTOR:
+						mbmsHardTrips.MT_no_heartbeat_trip = 1;
+						break;
+					case ARRAY:
+						mbmsHardTrips.AR_no_heartbeat_trip = 1;
+						break;
+					case CHARGE:
+						mbmsHardTrips.CHG_no_heartbeat_trip = 1;
+						break;
+				}
+				osMutexRelease(MBMSTripMutexHandle);
 			}
 
 			dead = 1;
@@ -292,25 +339,42 @@ uint8_t waitForFirstHeartbeats() {
 		}
 
 		// case that the heartbeat has reached max value
-		if (previousHeartbeats[i] >= 65535) { // check this logic lol
+		if (previousHeartbeats[i] >= 65535)
+		{ // check this logic lol
 			previousHeartbeats[i] = 0;
 		}
 
 		// case that heartbeat update has timed out
 		// This checks whether the heartbeat did not increase.
-		if(previousHeartbeats[i] >= contactorInfo[i].heartbeat){
+		osStatus_t ContactorInfo_a2 = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT );
+		if(ContactorInfo_a2 == osOK)
+		{
+			if(previousHeartbeats[i] >= contactorInfo[i].heartbeat)
+			{
 			// If the heartbeat hasn't changed for too long, the system assumes it may have stalled.
-			if(((osKernelGetTickCount() - heartbeatLastUpdatedTime[i])) > CONTACTOR_HEARTBEAT_TIMEOUT) { // where contactor_heartbeat_timeout is how often a heartbeat is sent out/recieved
-				// The failure counter increases.
-				heartbeatFailCounter[i]++;
-
+				if(((osKernelGetTickCount() - heartbeatLastUpdatedTime[i])) > CONTACTOR_HEARTBEAT_TIMEOUT)
+				{ 	// where contactor_heartbeat_timeout is how often a heartbeat is sent out/recieved
+					// The failure counter increases.
+					heartbeatFailCounter[i]++;
+				}
 			}
+			osMutexRelease(ContactorInfoMutexHandle);
 		}
+
+		// NOTE / FIX: lowkey this kinda wrong cuz the else is for the if statement getting mutex now..
+		// can prob manually do like.. if prev hb  < contactorInfo hb
+
 		// If the heartbeat did increase, the controller is alive. (Updates the last heartbeat time, Resets the failure counter, Stores the new heartbeat value)
-		else {
+		else
+		{
 			heartbeatLastUpdatedTime[i] = osKernelGetTickCount();
 			heartbeatFailCounter[i] = 0;
-			previousHeartbeats[i] = (contactorInfo[i].heartbeat);
+			osStatus_t ContactorInfo_a3 = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT );
+			if(ContactorInfo_a3 == osOK)
+			{
+				previousHeartbeats[i] = (contactorInfo[i].heartbeat);
+				osMutexRelease(ContactorInfoMutexHandle);
+			}
 		}
 
 
@@ -321,35 +385,42 @@ uint8_t waitForFirstHeartbeats() {
 
 
 
-
+// TODO/ PLEASE ADD the hard trips mutex here too, just the way u nromally do them if u have both mutexes type thing
 
 uint8_t startupBatteryCheck()
 {
     uint8_t pass = 1;
+	osStatus_t Batteryinfo_a1 = osMutexAcquire(BatteryInfoMutexHandle, READING_MUTEX_TIMEOUT );
+	osStatus_t MBMSTrip_a2 = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
+	if(Batteryinfo_a1 == osOK && MBMSTrip_a2 == osOK)
+	{
 
-    if (batteryInfo.highCellVoltage > HARD_MAX_CELL_VOLTAGE)
-    {
-        mbmsHardTrips.High_volt_cell_trip = 1;
-        pass = 0;
-    }
+		if (batteryInfo.highCellVoltage > HARD_MAX_CELL_VOLTAGE)
+		{
+			mbmsHardTrips.High_volt_cell_trip = 1;
+			pass = 0;
+		}
 
-    if (batteryInfo.lowCellVoltage < HARD_MIN_CELL_VOLTAGE)
-    {
-        mbmsHardTrips.Low_volt_cell_trip = 1;
-        pass = 0;
-    }
+		if (batteryInfo.lowCellVoltage < HARD_MIN_CELL_VOLTAGE)
+		{
+			mbmsHardTrips.Low_volt_cell_trip = 1;
+			pass = 0;
+		}
 
-    if (batteryInfo.highTemp > HARD_MAX_TEMP)
-    {
-        mbmsHardTrips.High_temp_trip = 1;
-        pass = 0;
-    }
+		if (batteryInfo.highTemp > HARD_MAX_TEMP)
+		{
+			mbmsHardTrips.High_temp_trip = 1;
+			pass = 0;
+		}
 
-    if (batteryInfo.lowTemp < HARD_MIN_TEMP)
-    {
-        mbmsHardTrips.Low_temp_trip = 1;
-        pass = 0;
-    }
+		if (batteryInfo.lowTemp < HARD_MIN_TEMP)
+		{
+			mbmsHardTrips.Low_temp_trip = 1;
+			pass = 0;
+		}
+		osMutexRelease(BatteryInfoMutexHandle);
+		osMutexRelease(MBMSTripMutexHandle);
+	}
 
     startup_Check_Counter++;
     return pass;
@@ -364,12 +435,18 @@ uint8_t checkPrechargersOpen()
 	uint8_t pass = 1;
     for (int i = 0; i < NUM_OF_CNTR; i++)
     {
-        /* If the precharger is reported closed, then it is NOT open. */
-        if (contactorInfo[i].precharge_close == CLOSE_CONTACTOR)
-        {
-            pass = 0;
-            return pass;
-        }
+    	osStatus_t ContactorInfo_a4 = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT );
+    	if(ContactorInfo_a4 == osOK)
+    	{
+			/* If the precharger is reported closed, then it is NOT open. */
+			if (contactorInfo[i].precharge_close == CLOSE_CONTACTOR)
+			{
+				pass = 0;
+				osMutexRelease(ContactorInfoMutexHandle); //need this here too -m
+				return pass;
+			}
+			osMutexRelease(ContactorInfoMutexHandle);
+		}
     }
     return pass;
 }
@@ -383,11 +460,17 @@ uint8_t checkContactorsOpen()
 	uint8_t pass = 1;
     for (int i = 0; i < NUM_OF_CNTR; i++)
     {
-        if (contactorInfo[i].contactor_close == CLOSE_CONTACTOR)
-        {
-        	pass = 0;
-            return pass;
-        }
+		osStatus_t ContactorInfo_a5 = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT );
+		if(ContactorInfo_a5 == osOK)
+		{
+			if (contactorInfo[i].contactor_close == CLOSE_CONTACTOR)
+			{
+				pass = 0;
+				osMutexRelease(ContactorInfoMutexHandle); // need this here too -m
+				return pass;
+			}
+			osMutexRelease(ContactorInfoMutexHandle);
+		}
     }
     return pass;
 }
@@ -435,15 +518,24 @@ void SystemStateMachine()
 
 		if(read_ESD() == ESD_ACTIVE)
 		{
-			mbmsHardTrips.ESD_trip = 1;
-			enter_BPS_FAULT();
-		}
+			osStatus_t MBMSTrip_a3 = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
+			if(MBMSTrip_a3 == osOK)
+			{
+				mbmsHardTrips.ESD_trip = 1;
 
-		if(mbmsStatus.Startup_state == COMPLETED)
+				enter_BPS_FAULT();
+			}
+			osMutexRelease(MBMSTripMutexHandle);
+		}
+		osStatus_t MBMSStatus_a3 = osMutexAcquire(MBMSStatusMutexHandle, READING_MUTEX_TIMEOUT );
+		if(MBMSStatus_a3 == osOK)
 		{
-			enter_FULLY_OPERATIONAL();
+			if(mbmsStatus.Startup_state == COMPLETED)
+			{
+				enter_FULLY_OPERATIONAL();
+			}
+			osMutexRelease(MBMSStatusMutexHandle);
 		}
-
 		break;
 
 
@@ -452,28 +544,50 @@ void SystemStateMachine()
 		if(read_MPS() != MPS_ACTIVE)
 		{
 			enter_MPS_DISCONNECTED();
-					break;
+			break;
 		}
 
 		if(plugged && (read_Charge_EN() == CHARGE_ENABLE_ACTIVE))
 		{
-			/*idk if i understand this */
-			mbmsPermissions.lv = 0;
-			mbmsPermissions.motor = 0;
+			osStatus_t Permissions_a5 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
+			if(Permissions_a5 == osOK)
+			{
+				mbmsPermissions.lv = 0;
+				mbmsPermissions.motor = 0;
+				osMutexRelease(PermissionsMutexHandle);
+			}
 			HAL_GPIO_WritePin(_12V_CAN_State_GPIO_Port, _12V_CAN_State_Pin, GPIO_PIN_RESET); //12V CAN Disabled
+
 		}
 
-		if(plugged && (contactorInfo[LV].contactor_close == OPEN_CONTACTOR) && (contactorInfo[MOTOR].contactor_close == OPEN_CONTACTOR))
+		// TODO not a todo but this looks rly good u should do this for when u have nested stuff like how u do
+		// waiting to have both mutexes before executing the section that interacts with the multiple variables
+		osStatus_t ContactorInfo_a6 = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT );
+		osStatus_t Permissions_a6 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
+		if(ContactorInfo_a6 == osOK && Permissions_a6 == osOK)
 		{
-			HAL_GPIO_WritePin(_14V_Charge_EN_GPIO_Port, _14V_Charge_EN_Pin, CHARGE_ENABLE_ACTIVE); //ENABLE THE CHARGER
-			mbmsPermissions.charge = 1;
+			if(plugged && (contactorInfo[LV].contactor_close == OPEN_CONTACTOR) && (contactorInfo[MOTOR].contactor_close == OPEN_CONTACTOR))
+			{
+				HAL_GPIO_WritePin(_14V_Charge_EN_GPIO_Port, _14V_Charge_EN_Pin, CHARGE_ENABLE_ACTIVE); //ENABLE THE CHARGER
+				mbmsPermissions.charge = 1;
+			}
+			osMutexRelease(ContactorInfoMutexHandle);
+			osMutexRelease(PermissionsMutexHandle);
 		}
-
-		if(plugged && (contactorInfo[CHARGE].contactor_close == CLOSE_CONTACTOR))
+		// i lowkey split these into 2 chunks tho heh
+		osStatus_t ContactorInfo_a7 = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT );
+		osStatus_t Permissions_a7 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
+		if(ContactorInfo_a7 == osOK && Permissions_a7 == osOK)
 		{
-			enter_CHARGING();
-		}
 
+			if(plugged && (contactorInfo[CHARGE].contactor_close == CLOSE_CONTACTOR))
+			{
+				enter_CHARGING();
+			}
+			osMutexRelease(ContactorInfoMutexHandle);
+			osMutexRelease(PermissionsMutexHandle);
+
+		}
 		Check_ContactorHeartbeats();
 		Update_SoftTripStruct();
 		Update_TripStruct();
@@ -492,13 +606,23 @@ void SystemStateMachine()
 		if( !plugged && (read_Discharge_EN() == DISCHARGE_ENABLE_ACTIVE))
 		{
 			HAL_GPIO_WritePin(_14V_Charge_EN_GPIO_Port, _14V_Charge_EN_Pin, !_14V_CHARGE_EN_ACTIVE); //Discharge THE CHARGER
-			mbmsPermissions.charge = 0;
+			osStatus_t Permissions_a8 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
+			if(Permissions_a8 == osOK)
+			{
+				mbmsPermissions.charge = 0;
+				osMutexRelease(PermissionsMutexHandle);
+			}
 		}
 
 		// once charge cntr is opened, close 12V CAN pchg
-		if(contactorInfo[CHARGE].contactor_close == OPEN_CONTACTOR)
+		osStatus_t ContactorInfo_a8 = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT );
+		if(ContactorInfo_a8 == osOK)
 		{
-			HAL_GPIO_WritePin(_12V_CAN_PCHG_GPIO_Port, _12V_CAN_PCHG_Pin, _12V_CAN_PCHG_ACTIVE);
+			if(contactorInfo[CHARGE].contactor_close == OPEN_CONTACTOR)
+			{
+				HAL_GPIO_WritePin(_12V_CAN_PCHG_GPIO_Port, _12V_CAN_PCHG_Pin, _12V_CAN_PCHG_ACTIVE);
+			}
+			osMutexRelease(ContactorInfoMutexHandle);
 		}
 
 		// once done 12V CAN pchging, close 12V CAN cntr
@@ -508,15 +632,26 @@ void SystemStateMachine()
 		}
 
 		// once 12V CAN fully enabled, enable LV & motor
-		if (read_12V_CAN_EN() == _12V_CAN_EN_ACTIVE) {
-			mbmsPermissions.lv = 1;
-			mbmsPermissions.motor = 1;
+		if (read_12V_CAN_EN() == _12V_CAN_EN_ACTIVE)
+		{
+			osStatus_t Permissions_a9 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
+			if(Permissions_a9 == osOK)
+			{
+				mbmsPermissions.lv = 1;
+				mbmsPermissions.motor = 1;
+				osMutexRelease(PermissionsMutexHandle);
+			}
 		}
 
 		// finally, car becomes fully op
-		if((contactorInfo[LV].contactor_close == CLOSE_CONTACTOR) && (contactorInfo[MOTOR].contactor_close == CLOSE_CONTACTOR))
+		osStatus_t ContactorInfo_a9 = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT );
+		if(ContactorInfo_a9 == osOK)
 		{
-			enter_FULLY_OPERATIONAL();
+			if((contactorInfo[LV].contactor_close == CLOSE_CONTACTOR) && (contactorInfo[MOTOR].contactor_close == CLOSE_CONTACTOR))
+			{
+				enter_FULLY_OPERATIONAL();
+			}
+			osMutexRelease(ContactorInfoMutexHandle);
 		}
 
 		Check_ContactorHeartbeats();
@@ -533,14 +668,21 @@ void SystemStateMachine()
 
 	case SOFT_TRIP:
 
-		if(mbmsSoftTrips.High_volt_cell_Strip == 1)
+		osStatus_t softtrip_a1 = osMutexAcquire(MBMSSoftTripMutexHandle, READING_MUTEX_TIMEOUT );
+		osStatus_t Permissions_a10 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
+		if(softtrip_a1 == osOK && Permissions_a10 == osOK)
 		{
-			mbmsPermissions.charge = 0;
-			mbmsPermissions.array  = 0;
-		}
-		if(mbmsSoftTrips.Low_volt_cell_Strip == 1)
-		{
-			mbmsPermissions.motor = 0;
+			if(mbmsSoftTrips.High_volt_cell_Strip == 1)
+			{
+				mbmsPermissions.charge = 0;
+				mbmsPermissions.array  = 0;
+			}
+			if(mbmsSoftTrips.Low_volt_cell_Strip == 1)
+			{
+				mbmsPermissions.motor = 0;
+			}
+			osMutexRelease(MBMSSoftTripMutexHandle);
+			osMutexRelease(PermissionsMutexHandle);
 		}
 		if(read_MPS() != MPS_ACTIVE)
 		{
@@ -563,44 +705,76 @@ void Control_Contactors()
 	uint8_t contactorClosing = false;
 
 	//check if any of the contactors are closed
-
-	for (int i = 0; i < NUM_OF_CNTR; i++){
-		if (contactorInfo[i].contactor_closing == CLOSING_CONTACTOR){
-			contactorClosing = true;
-			break;
+	for (int i = 0; i < NUM_OF_CNTR; i++)
+	{
+		osStatus_t ContactorInfo_a10 = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT );
+		if(ContactorInfo_a10 == osOK)
+		{
+			if (contactorInfo[i].contactor_closing == CLOSING_CONTACTOR)
+			{
+				contactorClosing = true;
+				osMutexRelease(ContactorInfoMutexHandle);
+				break;
+			}
 		}
-	}
-	//if no contactors are in the process of closing and the battery is nor in fault tpe state (MPS,BPS)
-	if (!contactorClosing && !mbmsPermissions.faulted){
-		if((mbmsPermissions.lv) && (contactorInfo[LV].contactor_close != CLOSE_CONTACTOR) && (mbmsStatus.discharge_enable == DISCHARGE_ENABLE_ACTIVE)){
-			contactorCommand.LV = CLOSE_CONTACTOR;
-		}
-		else if ((mbmsPermissions.motor) && (contactorInfo[MOTOR].contactor_close != CLOSE_CONTACTOR ) && (mbmsStatus.discharge_enable == DISCHARGE_ENABLE_ACTIVE)){
-			contactorCommand.motor = CLOSE_CONTACTOR;
-		}
-		else if ((mbmsPermissions.array) && (contactorInfo[ARRAY].contactor_close != CLOSE_CONTACTOR) && (mbmsStatus.charge_enable == CHARGE_ENABLE_ACTIVE)){
-			contactorCommand.array = CLOSE_CONTACTOR;
-		}
-		else if ((mbmsPermissions.charge) && (contactorInfo[CHARGE].contactor_close != CLOSE_CONTACTOR) && (mbmsStatus.charge_enable == CHARGE_ENABLE_ACTIVE)){
-			contactorCommand.charge = CLOSE_CONTACTOR;
-		}
+		osMutexRelease(ContactorInfoMutexHandle);
 	}
 
 
-	if (!mbmsPermissions.lv){
-		contactorCommand.LV = OPEN_CONTACTOR;
+	// TODO not a todo but another example of how u handled nested mutexes which is rly nice btw !!!!
+	osStatus_t ContactorInfo_a11 = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT );
+	osStatus_t Permissions_a11 = osMutexAcquire(PermissionsMutexHandle, READING_MUTEX_TIMEOUT );
+	osStatus_t MBMSStatus_a4 = osMutexAcquire(MBMSStatusMutexHandle, READING_MUTEX_TIMEOUT );
+	osStatus_t ContactorCommand_a1 = osMutexAcquire(ContactorCommandMutexHandle, UPDATING_MUTEX_TIMEOUT );
+	if(ContactorInfo_a11 == osOK && Permissions_a11 == osOK && MBMSStatus_a4 == osOK && ContactorCommand_a1 ==osOK)
+	{
+		//if no contactors are in the process of closing and the battery is nor in fault tpe state (MPS,BPS)
+		if (!contactorClosing && !mbmsPermissions.faulted)
+		{
+			if((mbmsPermissions.lv) && (contactorInfo[LV].contactor_close != CLOSE_CONTACTOR) && (mbmsStatus.discharge_enable == DISCHARGE_ENABLE_ACTIVE))
+			{
+				contactorCommand.LV = CLOSE_CONTACTOR;
+			}
+			else if ((mbmsPermissions.motor) && (contactorInfo[MOTOR].contactor_close != CLOSE_CONTACTOR ) && (mbmsStatus.discharge_enable == DISCHARGE_ENABLE_ACTIVE))
+			{
+				contactorCommand.motor = CLOSE_CONTACTOR;
+			}
+			else if ((mbmsPermissions.array) && (contactorInfo[ARRAY].contactor_close != CLOSE_CONTACTOR) && (mbmsStatus.charge_enable == CHARGE_ENABLE_ACTIVE))
+			{
+				contactorCommand.array = CLOSE_CONTACTOR;
+			}
+			else if ((mbmsPermissions.charge) && (contactorInfo[CHARGE].contactor_close != CLOSE_CONTACTOR) && (mbmsStatus.charge_enable == CHARGE_ENABLE_ACTIVE))
+			{
+				contactorCommand.charge = CLOSE_CONTACTOR;
+			}
+		}
+		osMutexRelease(ContactorInfoMutexHandle);
+		osMutexRelease(PermissionsMutexHandle);
+		osMutexRelease(MBMSStatusMutexHandle);
+		osMutexRelease(ContactorCommandMutexHandle);
 	}
 
-	if (!mbmsPermissions.motor){
-		contactorCommand.motor = OPEN_CONTACTOR;
-	}
+	osStatus_t Permissions_a12 = osMutexAcquire(PermissionsMutexHandle, READING_MUTEX_TIMEOUT );
+	osStatus_t ContactorCommand_a2 = osMutexAcquire(ContactorCommandMutexHandle, UPDATING_MUTEX_TIMEOUT );
+	if(Permissions_a12 == osOK && ContactorCommand_a2 == osOK)
+	{
+		if (!mbmsPermissions.lv){
+			contactorCommand.LV = OPEN_CONTACTOR;
+		}
 
-	if (!mbmsPermissions.array){
-		contactorCommand.array = OPEN_CONTACTOR;
-	}
+		if (!mbmsPermissions.motor){
+			contactorCommand.motor = OPEN_CONTACTOR;
+		}
 
-	if (!mbmsPermissions.charge){
-		contactorCommand.charge = OPEN_CONTACTOR;
+		if (!mbmsPermissions.array){
+			contactorCommand.array = OPEN_CONTACTOR;
+		}
+
+		if (!mbmsPermissions.charge){
+			contactorCommand.charge = OPEN_CONTACTOR;
+		}
+		osMutexRelease(PermissionsMutexHandle);
+		osMutexRelease(ContactorCommandMutexHandle);
 	}
 }
 
@@ -611,59 +785,60 @@ void Update_TripStruct()
 {
 	static uint8_t BPS_Fault = 0;
 
-	osStatus_t acquire = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
-	if(acquire == osOK)
+	osStatus_t MBMSTrip_a4 = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
+	osStatus_t ContactorInfo_a12 = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT );
+	osStatus_t Batteryinfo_a2 = osMutexAcquire(BatteryInfoMutexHandle, READING_MUTEX_TIMEOUT );
+	if(MBMSTrip_a4 == osOK && ContactorInfo_a12 == osOK && Batteryinfo_a2 ==osOK)
 	{
-
 		// Checking High Current & Reverse Current Trips
-		osStatus_t a1 = osMutexAcquire(ContactorInfoMutexHandle, UPDATING_MUTEX_TIMEOUT );
-		if(a1 == osOK)
+		if(batteryInfo.packCurrent > HARD_MAX_COMMON_CONTACTOR_CURRENT )
 		{
-			if(batteryInfo.packCurrent > HARD_MAX_COMMON_CONTACTOR_CURRENT )
-			{
-				mbmsHardTrips.CMN_high_cur_trip = 1;
-				BPS_Fault = 1;
-			}
-
-			if(contactorInfo[MOTOR].line_current > HARD_MAX_MOTORS_CONTACTOR_CURRENT)
-			{
-				mbmsHardTrips.MT_high_cur_trip = 1;
-				BPS_Fault = 1;
-			}
-
-			if(contactorInfo[ARRAY].line_current > HARD_MAX_ARRAY_CONTACTOR_CURRENT)
-			{
-				mbmsHardTrips.AR_high_cur_trip = 1;
-				BPS_Fault = 1;
-			}
-
-			if(contactorInfo[LV].line_current > HARD_MAX_LV_CONTACTOR_CURRENT)
-			{
-				mbmsHardTrips.LV_high_cur_trip = 1;
-				BPS_Fault = 1;
-			}
-
-			if(contactorInfo[CHARGE].line_current > HARD_MAX_CHARGE_CONTACTOR_CURRENT)
-			{
-				mbmsHardTrips.CHG_high_cur_trip = 1;
-				BPS_Fault = 1;
-			}
-
-			// Checking reverse current trips for charge and lv
-			if(contactorInfo[CHARGE].line_current > 0 || contactorInfo[LV].line_current < 0)
-			{
-				mbmsHardTrips.Reverse_cur_trip = 1;
-				BPS_Fault = 1;
-			}
-
-			osMutexRelease(ContactorInfoMutexHandle);
+			mbmsHardTrips.CMN_high_cur_trip = 1;
+			BPS_Fault = 1;
 		}
 
-
-		// Checking Battery Related Trips!!
-		osStatus_t a2 = osMutexAcquire(BatteryInfoMutexHandle, READING_MUTEX_TIMEOUT);
-		if(a2 == osOK)
+		if(contactorInfo[MOTOR].line_current > HARD_MAX_MOTORS_CONTACTOR_CURRENT)
 		{
+			mbmsHardTrips.MT_high_cur_trip = 1;
+			BPS_Fault = 1;
+		}
+
+		if(contactorInfo[ARRAY].line_current > HARD_MAX_ARRAY_CONTACTOR_CURRENT)
+		{
+			mbmsHardTrips.AR_high_cur_trip = 1;
+			BPS_Fault = 1;
+		}
+
+		if(contactorInfo[LV].line_current > HARD_MAX_LV_CONTACTOR_CURRENT)
+		{
+			mbmsHardTrips.LV_high_cur_trip = 1;
+			BPS_Fault = 1;
+		}
+
+		if(contactorInfo[CHARGE].line_current > HARD_MAX_CHARGE_CONTACTOR_CURRENT)
+		{
+			mbmsHardTrips.CHG_high_cur_trip = 1;
+			BPS_Fault = 1;
+		}
+
+		// Checking reverse current trips for charge and lv
+		if(contactorInfo[CHARGE].line_current > 0 || contactorInfo[LV].line_current < 0)
+		{
+			mbmsHardTrips.Reverse_cur_trip = 1;
+			BPS_Fault = 1;
+		}
+		osMutexRelease(MBMSTripMutexHandle);
+		osMutexRelease(ContactorInfoMutexHandle);
+		osMutexRelease(BatteryInfoMutexHandle);
+	}
+
+
+	osStatus_t MBMSTrip_a5 = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
+	osStatus_t Batteryinfo_a3 = osMutexAcquire(BatteryInfoMutexHandle, READING_MUTEX_TIMEOUT );
+	osStatus_t MBMSStatus_a5 = osMutexAcquire(MBMSStatusMutexHandle, READING_MUTEX_TIMEOUT );
+	if(MBMSTrip_a5 == osOK && Batteryinfo_a3 ==osOK && MBMSStatus_a5 == osOK)
+		{
+			// Checking Battery Related Trips!!
 			if(batteryInfo.highCellVoltage > HARD_MAX_CELL_VOLTAGE)
 			{
 				mbmsHardTrips.High_volt_cell_trip = 1;
@@ -688,82 +863,89 @@ void Update_TripStruct()
 				BPS_Fault = 1;
 			}
 
-			osMutexRelease(BatteryInfoMutexHandle);
-		}
-
-		// Checking Missing Orion Messages Trip
-		osStatus_t a3 = osMutexAcquire(MBMSStatusMutexHandle, READING_MUTEX_TIMEOUT);
-		if (a3 == osOK)
-		{
+	    	// Checking Missing Orion Messages Trip
 			//if orion CAN msg wasnt received recently, trip set
 			if(!(mbmsStatus.OBMS_CAN_RR))
 			{
 				mbmsHardTrips.OBMS_msg_timeout_trip = 1;
 				BPS_Fault = 1;
 			}
-			osMutexRelease(MBMSStatusMutexHandle);
+
+		osMutexRelease(MBMSTripMutexHandle);
+		osMutexRelease(BatteryInfoMutexHandle);
+		osMutexRelease(MBMSStatusMutexHandle);
+	}
+
+	// Checking contactor disconnected & connected unexpectedly trip
+	osStatus_t ContactorCommand_a3 = osMutexAcquire(ContactorCommandMutexHandle, READING_MUTEX_TIMEOUT);
+	osStatus_t ContactorInfo_a13 = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT );
+	osStatus_t MBMSTrip_a6 = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
+	if (ContactorCommand_a3 == osOK && ContactorInfo_a13 == osOK && MBMSTrip_a6 == osOK)
+	{
+		/* Contactor disconnected unexpectedly */
+		/* To check, we compare a minimum current draw with the state of the contactor */
+		if(((contactorCommand.motor == CLOSE_CONTACTOR) 	 && 	(contactorInfo[MOTOR].line_current < NO_CURRENT_THRESHOLD)) 	 ||
+		  ((contactorCommand.array == CLOSE_CONTACTOR) 		 && 	(contactorInfo[ARRAY].line_current < NO_CURRENT_THRESHOLD)) 	 ||
+		  ((contactorCommand.LV == CLOSE_CONTACTOR) 		 && 	(contactorInfo[LV].line_current < NO_CURRENT_THRESHOLD)) 		 ||
+		  ((contactorCommand.charge == CLOSE_CONTACTOR) 	 && 	(contactorInfo[CHARGE].line_current < NO_CURRENT_THRESHOLD))
+		)
+		{
+			mbmsHardTrips.CNTR_disconnect_trip = 1;
+			BPS_Fault = 1;
+
 		}
 
-		// Checking contactor disconnected & connected unexpectedly trip
-		osStatus_t a4 = osMutexAcquire(ContactorCommandMutexHandle, READING_MUTEX_TIMEOUT);
-		if (a4 == osOK)
+		/* Contactor connected unexpectedly trip */
+		if(((contactorCommand.motor == OPEN_CONTACTOR) 	&& 	(contactorInfo[MOTOR].line_current >= NO_CURRENT_THRESHOLD)) 	 ||
+		  ((contactorCommand.array == OPEN_CONTACTOR) 	&& 	(contactorInfo[ARRAY].line_current >= NO_CURRENT_THRESHOLD)) 	 ||
+		  ((contactorCommand.LV == OPEN_CONTACTOR) 		&& 	(contactorInfo[LV].line_current >= NO_CURRENT_THRESHOLD)) 		 ||
+		  ((contactorCommand.charge == OPEN_CONTACTOR) 	&& 	(contactorInfo[CHARGE].line_current >= NO_CURRENT_THRESHOLD)))
 		{
-			/* Contactor disconnected unexpectedly */
-			/* To check, we compare a minimum current draw with the state of the contactor */
-			if(((contactorCommand.motor == CLOSE_CONTACTOR) 	 && 	(contactorInfo[MOTOR].line_current < NO_CURRENT_THRESHOLD)) 	 ||
-			  ((contactorCommand.array == CLOSE_CONTACTOR) 		 && 	(contactorInfo[ARRAY].line_current < NO_CURRENT_THRESHOLD)) 	 ||
-			  ((contactorCommand.LV == CLOSE_CONTACTOR) 		 && 	(contactorInfo[LV].line_current < NO_CURRENT_THRESHOLD)) 		 ||
-			  ((contactorCommand.charge == CLOSE_CONTACTOR) 	 && 	(contactorInfo[CHARGE].line_current < NO_CURRENT_THRESHOLD))
-			)
-			{
-				mbmsHardTrips.CNTR_disconnect_trip = 1;
-				BPS_Fault = 1;
+			mbmsHardTrips.CNTR_connect_trip = 1;
+			BPS_Fault = 1;
+		}
 
-			}
-
-			/* Contactor connected unexpectedly trip */
-			if(((contactorCommand.motor == OPEN_CONTACTOR) 	&& 	(contactorInfo[MOTOR].line_current >= NO_CURRENT_THRESHOLD)) 	 ||
-			  ((contactorCommand.array == OPEN_CONTACTOR) 	&& 	(contactorInfo[ARRAY].line_current >= NO_CURRENT_THRESHOLD)) 	 ||
-			  ((contactorCommand.LV == OPEN_CONTACTOR) 		&& 	(contactorInfo[LV].line_current >= NO_CURRENT_THRESHOLD)) 		 ||
-			  ((contactorCommand.charge == OPEN_CONTACTOR) 	&& 	(contactorInfo[CHARGE].line_current >= NO_CURRENT_THRESHOLD)))
+		/* Here, it is also a contactor connected unexpectedly trip if the contactor won't open when told to */
+		for(int i = 0; i < NUM_OF_CNTR; i++)
+		{
+			if(contactorInfo[i].contactor_opening_error == 1 )
 			{
 				mbmsHardTrips.CNTR_connect_trip = 1;
 				BPS_Fault = 1;
 			}
-
-			/* Here, it is also a contactor connected unexpectedly trip if the contactor won't open when told to */
-			for(int i = 0; i < NUM_OF_CNTR; i++)
-			{
-				if(contactorInfo[i].contactor_opening_error == 1 )
-				{
-					mbmsHardTrips.CNTR_connect_trip = 1;
-					BPS_Fault = 1;
-				}
-			}
-
-			osMutexRelease(ContactorCommandMutexHandle);
 		}
 
+		osMutexRelease(ContactorCommandMutexHandle);
+		osMutexRelease(ContactorInfoMutexHandle);
+		osMutexRelease(MBMSTripMutexHandle);
+	}
+
+
+	osStatus_t MBMSTrip_a7 = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
+	if(MBMSTrip_a7 == osOK)
+	{
 		// Check ESD
-		if (read_ESD() == ESD_ACTIVE) {
+		if (read_ESD() == ESD_ACTIVE)
+		{
 			mbmsHardTrips.ESD_trip = 1;
 			BPS_Fault = 1;
 		}
-
-		// check main & common cntr !!!
-		if ((read_Common_CNTR_Aux() != COMMON_CNTR_ACTIVE) || (read_Main_CNTR_Aux() != MAIN_CNTR_AUX_ACTIVE)) {
-			// note there is no displayed fault for this :C
-			// bc technically if either of these r open hardware shuld do some faulting process for us....
-			BPS_Fault = 1;
-		}
-
-		// Finally, if there were any trips, go to BPS FAULT state!!!!
-		if(BPS_Fault)
-		{
-			enter_BPS_FAULT();
-		}
-
+		osMutexRelease(MBMSTripMutexHandle);
 	}
+
+	// check main & common cntr !!!
+	if ((read_Common_CNTR_Aux() != COMMON_CNTR_ACTIVE) || (read_Main_CNTR_Aux() != MAIN_CNTR_AUX_ACTIVE)) {
+		// note there is no displayed fault for this :C
+		// bc technically if either of these r open hardware shuld do some faulting process for us....
+		BPS_Fault = 1;
+	}
+
+	// Finally, if there were any trips, go to BPS FAULT state!!!!
+	if(BPS_Fault)
+	{
+		enter_BPS_FAULT();
+	}
+
 }
 
 
@@ -942,12 +1124,18 @@ void Check_ContactorHeartbeats()
 
 
 
+
+
 // Had to use AI for these bottom functions:
 void clear_Trips()
 {
-    /* Reset all hard trip flags to 0 */
-    memset(&mbmsHardTrips, 0, sizeof(MBMS_Hard_Trips));
-
+	osStatus_t MBMSTrip_a8 = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
+	if(MBMSTrip_a8 == osOK)
+	{
+		/* Reset all hard trip flags to 0 */
+		memset(&mbmsHardTrips, 0, sizeof(MBMS_Hard_Trips));
+	}
+	osMutexRelease(MBMSTripMutexHandle);
 }
 
 
@@ -957,7 +1145,12 @@ void clear_Trips()
 void clear_SoftTrips()
 {
     /* Reset all soft battery trip flags */
-    memset(&mbmsSoftTrips, 0, sizeof(MBMS_Soft_Trips));
+	osStatus_t softtrip_a2 = osMutexAcquire(MBMSSoftTripMutexHandle, UPDATING_MUTEX_TIMEOUT );
+	if(softtrip_a2 == osOK)
+	{
+		memset(&mbmsSoftTrips, 0, sizeof(MBMS_Soft_Trips));
+		osMutexRelease(MBMSSoftTripMutexHandle);
+	}
 }
 
 
@@ -977,7 +1170,8 @@ void Update_ContactorInfoStruct() {
     uint32_t extID = contactorMsg.extendedID;
 
     // if the msg is a contactor info msg
-    if ((extID & CNTR_MSG_MASK) == CONTACTOR_ID){
+    if ((extID & CNTR_MSG_MASK) == CONTACTOR_ID)
+    {
     	uint8_t contactor_idx = extID - CONTACTOR_ID;
 
     	uint8_t *data = contactorMsg.data;
@@ -992,24 +1186,35 @@ void Update_ContactorInfoStruct() {
 		int16_t 	lineCurrent 			= ((data[0] & 0x80) >> 7) | (data[1] << 1) | ((data[2] & 0x07) << 9); // extract bits 7 to 18
 		int16_t 	chargeCurrent 			= ((data[2] & 0xF8) >> 3) | ((data[3] & 0x7F) >> 6); // extract bits 19 to 30
 
-		contactorInfo[contactor_idx].precharge_close = prechargerClosed;
-		contactorInfo[contactor_idx].precharge_closing = prechargerClosing;
-		contactorInfo[contactor_idx].precharge_error = prechargerError;
-		contactorInfo[contactor_idx].contactor_close = contactorClosed;
-		contactorInfo[contactor_idx].contactor_closing = contactorClosing;
-		contactorInfo[contactor_idx].contactor_error = contactorError;
-		contactorInfo[contactor_idx].contactor_opening_error = contactorOpeningError;
-		contactorInfo[contactor_idx].line_current = lineCurrent;
-		contactorInfo[contactor_idx].charge_current = chargeCurrent;
+		osStatus_t ContactorInfo_a14 = osMutexAcquire(ContactorInfoMutexHandle, UPDATING_MUTEX_TIMEOUT );
+		if(ContactorInfo_a14 == osOK)
+		{
+			contactorInfo[contactor_idx].precharge_close = prechargerClosed;
+			contactorInfo[contactor_idx].precharge_closing = prechargerClosing;
+			contactorInfo[contactor_idx].precharge_error = prechargerError;
+			contactorInfo[contactor_idx].contactor_close = contactorClosed;
+			contactorInfo[contactor_idx].contactor_closing = contactorClosing;
+			contactorInfo[contactor_idx].contactor_error = contactorError;
+			contactorInfo[contactor_idx].contactor_opening_error = contactorOpeningError;
+			contactorInfo[contactor_idx].line_current = lineCurrent;
+			contactorInfo[contactor_idx].charge_current = chargeCurrent;
+			osMutexRelease(ContactorInfoMutexHandle);
+		}
 
+    }
 
-    }														// This is where we split the messages into heartbeat or board
+    // This is where we split the messages into heartbeat or board
     // if the msg is a contactor heartbeat msg. We split them again into which heartbeat CCP it is
-    else {
+    else
+    {
     	uint8_t contactor_idx = extID - CONTACTOR_HEARTBEAT; // get index (which contactor it is)
-
     	uint16_t new_heartbeat = contactorMsg.data[0] + (contactorMsg.data[1] << 8);
-    	contactorInfo[contactor_idx].heartbeat = new_heartbeat;
+    	osStatus_t ContactorInfo_a15 = osMutexAcquire(ContactorInfoMutexHandle, UPDATING_MUTEX_TIMEOUT );
+    	if(ContactorInfo_a15 == osOK)
+    	{
+    		contactorInfo[contactor_idx].heartbeat = new_heartbeat;
+    		osMutexRelease(ContactorInfoMutexHandle);
+    	}
     }
 
     return;
@@ -1020,16 +1225,30 @@ void Update_ContactorInfoStruct() {
 void Update_DCDCStackStruct(void)
 {
 
-	dcdc_stack.DCDC1_en = read_DCDC1_EN();
-	dcdc_stack._14V_Charge_EN = read_14V_Charge_EN();
-	dcdc_stack.nDCDC_Fault = read_nDCDC_Fault();
-	dcdc_stack._12V_Critical_Fault = read_12V_Critical_Fault();
-	dcdc_stack._14V_Charger_Fault = read_14V_Charger_Fault();
-	dcdc_stack._12V_Critical_UC = read_12V_Critical_UC();
+	osStatus_t DCDCStack_a1 = osMutexAcquire(DCDCStackMutexHandle, UPDATING_MUTEX_TIMEOUT );
+	if(DCDCStack_a1 == osOK)
+	{
+		dcdc_stack.DCDC1_en = read_DCDC1_EN();
+		dcdc_stack._14V_Charge_EN = read_14V_Charge_EN();
+		dcdc_stack.nDCDC_Fault = read_nDCDC_Fault();
+		dcdc_stack._12V_Critical_Fault = read_12V_Critical_Fault();
+		dcdc_stack._14V_Charger_Fault = read_14V_Charger_Fault();
+		dcdc_stack._12V_Critical_UC = read_12V_Critical_UC();
+		osMutexRelease(DCDCStackMutexHandle);
+	}
 
 }
 
 
+// TODO the logic of this function got messed up w the mutexes
+// try and read thru it and understand why its wrong now
+// basically the else if (temp and cell volts) was meant for the if statement block checking if its pack info
+// but now that you added the mutex , u also moved the next the else if blocks into
+// this section they shouldnt be in..... (they are inside of pack info section now????)
+// they are now the else if for whether or not u got the battery info mutex which is incorrect lol
+// A way to fix, would be to move it back to what it was and get the battery info mutex
+// 3 separate times, once in each if/else if block !!!
+// this is also good to keep the cs small
 
 
 // This function reads battery-related CAN messages from a queue
@@ -1047,9 +1266,14 @@ void Update_BatteryInfoStruct(void) // updating Orion / battery info struct
     {
         // Reset timeout counter since we got a message
     	missingOBMS_MsgCounter = 0;
-
+    	osStatus_t MBMSStatus_a6 = osMutexAcquire(MBMSStatusMutexHandle, UPDATING_MUTEX_TIMEOUT );
+    	if(MBMSStatus_a6 == osOK)
+    	{
         // Indicate CAN communication is healthy
-        mbmsStatus.OBMS_CAN_RR = 1;
+    		mbmsStatus.OBMS_CAN_RR = 1;
+    		osMutexRelease(MBMSStatusMutexHandle);
+    	}
+
 
         // Pointer to the raw data bytes in the CAN message
         uint8_t *data = batteryMsg.data;
@@ -1057,65 +1281,86 @@ void Update_BatteryInfoStruct(void) // updating Orion / battery info struct
         // Check if this message contains pack-level information
         if (batteryMsg.extendedID == PACK_INFO_ID)
         {
-            // Ensure message has enough bytes
-            if (batteryMsg.DLC >= 8) // ?? its ok -m
-            {
-                // Extract pack current (2 bytes, scaled by 10)
-                batteryInfo.packCurrent  = (float)((uint16_t)(data[0] | (data[1] << 8))) / 10.0f;
+        	osStatus_t Batteryinfo_a4 = osMutexAcquire(BatteryInfoMutexHandle, UPDATING_MUTEX_TIMEOUT );
+        	if(Batteryinfo_a4 == osOK)
+        	{
+				// Ensure message has enough bytes
+				if (batteryMsg.DLC >= 8) // ?? its ok -m
+				{
+					// Extract pack current (2 bytes, scaled by 10)
+					batteryInfo.packCurrent  = (float)((uint16_t)(data[0] | (data[1] << 8))) / 10.0f;
 
-                // Extract pack voltage (2 bytes, scaled by 10)
-                batteryInfo.packVoltage  = (float)((uint16_t)(data[2] | (data[3] << 8))) / 10.0f;
+					// Extract pack voltage (2 bytes, scaled by 10)
+					batteryInfo.packVoltage  = (float)((uint16_t)(data[2] | (data[3] << 8))) / 10.0f;
 
-                // Extract state of charge (1 byte, scaled by 2)
-                batteryInfo.packSOC      = (float)(data[4]) / 2.0f;
+					// Extract state of charge (1 byte, scaled by 2)
+					batteryInfo.packSOC      = (float)(data[4]) / 2.0f;
 
-                // Extract amp-hours (2 bytes, scaled by 10)
-                batteryInfo.packAmphours = (float)((uint16_t)(data[5] | (data[6] << 8))) / 10.0f;
+					// Extract amp-hours (2 bytes, scaled by 10)
+					batteryInfo.packAmphours = (float)((uint16_t)(data[5] | (data[6] << 8))) / 10.0f;
 
-                // Extract depth of discharge (1 byte, scaled by 2)
-                batteryInfo.packDOD      = (float)(data[7]) / 2.0f;
-            }
+					// Extract depth of discharge (1 byte, scaled by 2)
+					batteryInfo.packDOD      = (float)(data[7]) / 2.0f;
+				}
+
+				osMutexRelease(BatteryInfoMutexHandle);
+			}
+
         }
 
-        // Check if this message contains temperature data
-        else if (batteryMsg.extendedID == TEMP_INFO_ID)
-        {
-            // Ensure message has enough bytes
-            if (batteryMsg.DLC >= 5)
-            {
-                // Highest temperature in pack
-                batteryInfo.highTemp = data[0];
 
-                // Lowest temperature (cast to signed value)
-                batteryInfo.lowTemp  = (int8_t)data[2];
 
-                // Average temperature
-                batteryInfo.avgTemp  = data[4];
-            }
-        }
+			// Check if this message contains temperature data
+			else if (batteryMsg.extendedID == TEMP_INFO_ID)
+			{
+	        	osStatus_t Batteryinfo_a5 = osMutexAcquire(BatteryInfoMutexHandle, UPDATING_MUTEX_TIMEOUT );
+	        	if(Batteryinfo_a5 == osOK)
+	        	{
+					// Ensure message has enough bytes
+					if (batteryMsg.DLC >= 5)
+					{
+						// Highest temperature in pack
+						batteryInfo.highTemp = data[0];
 
-        // Check if this message contains cell voltage data
-        else if (batteryMsg.extendedID == CELL_VOLTAGES_ID)
-        {
-            // Ensure message has enough bytes
-            if (batteryMsg.DLC >= 6) // check also
-            {
-                // Lowest cell voltage (2 bytes, scaled by 10000)
-                batteryInfo.lowCellVoltage    = (float)((uint16_t)(data[0] | (data[1] << 8))) / 10000.0f;
+						// Lowest temperature (cast to signed value)
+						batteryInfo.lowTemp  = (int8_t)data[2];
 
-                // ID/index of lowest voltage cell
-                batteryInfo.lowCellVoltageID  = data[2];
+						// Average temperature
+						batteryInfo.avgTemp  = data[4];
+					}
+					osMutexRelease(BatteryInfoMutexHandle);
+				}
+			}
 
-                // Highest cell voltage (2 bytes, scaled by 10000)
-                batteryInfo.highCellVoltage   = (float)((uint16_t)(data[3] | (data[4] << 8))) / 10000.0f;
+			// Check if this message contains cell voltage data
+			else if (batteryMsg.extendedID == CELL_VOLTAGES_ID)
+			{
+	        	osStatus_t Batteryinfo_a6 = osMutexAcquire(BatteryInfoMutexHandle, UPDATING_MUTEX_TIMEOUT );
+	        	if(Batteryinfo_a6 == osOK)
+	        	{
+					if (batteryMsg.DLC >= 6) // check also
+					{
+						// Lowest cell voltage (2 bytes, scaled by 10000)
+						batteryInfo.lowCellVoltage    = (float)((uint16_t)(data[0] | (data[1] << 8))) / 10000.0f;
 
-                // ID/index of highest voltage cell
-                batteryInfo.highCellVoltageID = data[5];
-            }
-        }
+						// ID/index of lowest voltage cell
+						batteryInfo.lowCellVoltageID  = data[2];
+
+						// Highest cell voltage (2 bytes, scaled by 10000)
+						batteryInfo.highCellVoltage   = (float)((uint16_t)(data[3] | (data[4] << 8))) / 10000.0f;
+
+						// ID/index of highest voltage cell
+						batteryInfo.highCellVoltageID = data[5];
+					}
+				}
+	        	osMutexRelease(BatteryInfoMutexHandle);
+			}
 
         // Other message types (STARTUP_INFO, ERRORS, etc.) are not handled yet
+
     }
+
+
     else
     {
         // No message received → increment timeout counter
@@ -1125,12 +1370,18 @@ void Update_BatteryInfoStruct(void) // updating Orion / battery info struct
     // If we missed too many messages in a row (timeout condition)
     if (((float) missingOBMS_MsgCounter/10.0) >= ORION_MSG_TIMEOUT_MS) // check
     {
-        // Mark CAN communication as lost
-        mbmsStatus.OBMS_CAN_RR = 0;
-
-        // Trigger a fault/trip due to message timeout
-        mbmsHardTrips.OBMS_msg_timeout_trip = 1;
-    }
+    	osStatus_t MBMSStatus_a7 = osMutexAcquire(MBMSStatusMutexHandle, UPDATING_MUTEX_TIMEOUT );
+    	osStatus_t MBMSTrip_a9 = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT );
+    	if(MBMSStatus_a7 == osOK && MBMSTrip_a9 == osOK)
+    	{
+			// Mark CAN communication as lost
+			mbmsStatus.OBMS_CAN_RR = 0;
+			// Trigger a fault/trip due to message timeout
+			mbmsHardTrips.OBMS_msg_timeout_trip = 1;
+    	}
+		osMutexRelease(MBMSStatusMutexHandle);
+		osMutexRelease(MBMSTripMutexHandle);
+	}
 }
 
 
