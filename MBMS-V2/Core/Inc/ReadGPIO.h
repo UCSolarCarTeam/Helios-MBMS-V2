@@ -22,10 +22,10 @@
 #define _12V_CAN_STATE_ACTIVE 1
 
 // from OBMS
-#define DISCHARGE_ENABLE_ACTIVE 1 // allowed to discharge
+#define DISCHARGE_ENABLE_ACTIVE 1 // allowed to discharge for motros and LV beacuse you are using the batterys
 #define CHARGE_ENABLE_ACTIVE 1 // allowed to charge
 
-#define EVCC_12_SW_ACTIVE 1 // charger plugged in
+#define EVCC_12V_SW_ACTIVE 1 // charger plugged in
 
 #define BPS_FAULT_ACTIVE 1 // strobe en essentially
 
@@ -50,7 +50,7 @@
 #define read_Charge_EN()						 HAL_GPIO_ReadPin(Charge_Enable_GPIO_Port, Charge_Enable_Pin)
 #define	read_Discharge_EN() 				 	 HAL_GPIO_ReadPin(Discharge_Enable_GPIO_Port, Discharge_Enable_Pin)
 
-#define read_EVCC_12_SW()						 HAL_GPIO_ReadPin(EVCC_12V_Sw_GPIO_Port, EVCC_12V_Sw_Pin)
+#define read_EVCC_12V_SW()						 HAL_GPIO_ReadPin(EVCC_12V_Sw_GPIO_Port, EVCC_12V_Sw_Pin)
 
 #define read_MPS()								 HAL_GPIO_ReadPin(MPS_GPIO_Port, MPS_Pin)
 #define read_ESD()								 HAL_GPIO_ReadPin(ESD_GPIO_Port, ESD_Pin)
