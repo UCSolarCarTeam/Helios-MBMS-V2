@@ -955,79 +955,83 @@ void Update_SoftTripStruct()
 {
 	uint8_t trip = 0;
 
-	osStatus_t acquire = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
-	if (acquire == osOK)
+	osStatus_t acquire = osMutexAcquire(MBMSSoftTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
+	osStatus_t batteryAcquire = osMutexAcquire(BatteryInfoMutexHandle, READING_MUTEX_TIMEOUT);
+
+	if (acquire == osOK && batterAcquire == osOK)
 	{
-		/* Checking battery-related soft trips */
-		osStatus_t batteryAcquire = osMutexAcquire(BatteryInfoMutexHandle, READING_MUTEX_TIMEOUT);
-		if (batteryAcquire == osOK)
+
+		if (batteryInfo.highCellVoltage > SOFT_MAX_CELL_VOLTAGE)
 		{
-			if (batteryInfo.highCellVoltage > SOFT_MAX_CELL_VOLTAGE)
-			{
-				mbmsSoftTrips.High_volt_cell_Strip = 1;
-				trip = 1;
-			}
-
-			if (batteryInfo.lowCellVoltage < SOFT_MIN_CELL_VOLTAGE)
-			{
-				mbmsSoftTrips.Low_volt_cell_Strip = 1;
-				trip = 1;
-			}
-
-			if (batteryInfo.highTemp > SOFT_MAX_TEMP)
-			{
-				mbmsSoftTrips.High_temp_Strip = 1;
-				trip = 1;
-			}
-
-			if (batteryInfo.lowTemp < SOFT_MIN_TEMP)
-			{
-				mbmsSoftTrips.Low_temp_Strip = 1;
-				trip = 1;
-			}
-
-			if (batteryInfo.packCurrent > SOFT_MAX_COMMON_CONTACTOR_CURRENT)
-			{
-				mbmsSoftTrips.CMN_high_cur_Strip = 1;
-				trip = 1;
-			}
-
-			osMutexRelease(BatteryInfoMutexHandle);
+			mbmsSoftTrips.High_volt_cell_Strip = 1;
+			trip = 1;
 		}
 
-		/* Checking contactor high-current soft trips */
-		osStatus_t contactorAcquire = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT);
-		if (contactorAcquire == osOK)
+		if (batteryInfo.lowCellVoltage < SOFT_MIN_CELL_VOLTAGE)
 		{
-			if (contactorInfo[MOTOR].line_current > SOFT_MAX_MOTORS_CONTACTOR_CURRENT)
-			{
-				mbmsSoftTrips.MT_high_cur_Strip = 1;
-				trip = 1;
-			}
-
-			if (contactorInfo[ARRAY].line_current > SOFT_MAX_ARRAY_CONTACTOR_CURRENT)
-			{
-				mbmsSoftTrips.AR_high_cur_Strip = 1;
-				trip = 1;
-			}
-
-			if (contactorInfo[LV].line_current > SOFT_MAX_LV_CONTACTOR_CURRENT)
-			{
-				mbmsSoftTrips.LV_high_cur_Strip = 1;
-				trip = 1;
-			}
-
-			if (contactorInfo[CHARGE].line_current > SOFT_MAX_CHARGE_CONTACTOR_CURRENT)
-			{
-				mbmsSoftTrips.CHG_high_cur_Strip = 1;
-				trip = 1;
-			}
-
-			osMutexRelease(ContactorInfoMutexHandle);
+			mbmsSoftTrips.Low_volt_cell_Strip = 1;
+			trip = 1;
 		}
 
-		osMutexRelease(MBMSTripMutexHandle);
+		if (batteryInfo.highTemp > SOFT_MAX_TEMP)
+		{
+			mbmsSoftTrips.High_temp_Strip = 1;
+			trip = 1;
+		}
+
+		if (batteryInfo.lowTemp < SOFT_MIN_TEMP)
+		{
+			mbmsSoftTrips.Low_temp_Strip = 1;
+			trip = 1;
+		}
+
+		if (batteryInfo.packCurrent > SOFT_MAX_COMMON_CONTACTOR_CURRENT)
+		{
+			mbmsSoftTrips.CMN_high_cur_Strip = 1;
+			trip = 1;
+		}
+
+		osMutexRelease(BatteryInfoMutexHandle);
+		osMutexRelease(MBMSSoftTripMutexHandle);
 	}
+
+
+	/* Checking contactor high-current soft trips */
+	osStatus_t MBMSStrip_a2 = osMutexAcquire(MBMSSoftTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
+	osStatus_t contactorInfo_a1 = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT);
+	if (contactorInfo_a1 == osOK && MBMSStrip_a2 == osOK)
+	{
+		if (contactorInfo[MOTOR].line_current > SOFT_MAX_MOTORS_CONTACTOR_CURRENT)
+		{
+			mbmsSoftTrips.MT_high_cur_Strip = 1;
+			trip = 1;
+		}
+
+		if (contactorInfo[ARRAY].line_current > SOFT_MAX_ARRAY_CONTACTOR_CURRENT)
+		{
+			mbmsSoftTrips.AR_high_cur_Strip = 1;
+			trip = 1;
+		}
+
+		if (contactorInfo[LV].line_current > SOFT_MAX_LV_CONTACTOR_CURRENT)
+		{
+			mbmsSoftTrips.LV_high_cur_Strip = 1;
+			trip = 1;
+		}
+
+		if (contactorInfo[CHARGE].line_current > SOFT_MAX_CHARGE_CONTACTOR_CURRENT)
+		{
+			mbmsSoftTrips.CHG_high_cur_Strip = 1;
+			trip = 1;
+		}
+
+		// TODO need to check common current (pack current from orion)
+
+		osMutexRelease(ContactorInfoMutexHandle);
+		osMutexRelease(MBMSSoftTripMutexHandle);
+	}
+
+
 
 	if (trip == 1)
 	{

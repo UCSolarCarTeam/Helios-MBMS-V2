@@ -126,6 +126,7 @@ static void Startup_Flowchart(void)
 				/* no timeout, no shutdown */
 				if (mbmsStatus.System_state == BPS_FAULT)
 				{
+					osMutexRelease(MBMSStatusMutexHandle);
 					osThreadTerminate(StartupTaskHandle);
 
 				}
@@ -149,6 +150,7 @@ static void Startup_Flowchart(void)
 
 				if (mbmsStatus.System_state == BPS_FAULT)
 				{
+					osMutexRelease(MBMSStatusMutexHandle);
 					osThreadTerminate(StartupTaskHandle);
 
 				}
