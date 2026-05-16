@@ -61,6 +61,8 @@ extern osThreadId_t canRxTaskHandle;
 extern osThreadId_t ContactorsTaskHandle;
 extern osThreadId_t BatteryTaskHandle;
 
+extern const osThreadAttr_t StartupTask_attributes; // for shutoff
+
 //Queue Handles
 extern osMessageQueueId_t canTxQueueHandle;
 extern osMessageQueueId_t canRxQueueHandle;
