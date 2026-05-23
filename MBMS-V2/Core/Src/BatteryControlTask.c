@@ -361,11 +361,11 @@ uint8_t waitForFirstHeartbeats()
 			osMutexRelease(ContactorInfoMutexHandle);
 		}
 
-		// NOTE / FIX: lowkey this kinda wrong cuz the else is for the if statement getting mutex now..
+		// NOTE  TODO / FIX: lowkey this kinda wrong cuz the else is for the if statement getting mutex now..
 		// can prob manually do like.. if prev hb  < contactorInfo hb
 
 		// If the heartbeat did increase, the controller is alive. (Updates the last heartbeat time, Resets the failure counter, Stores the new heartbeat value)
-		else
+		if (previousHeartbeats[i] < contactorInfo[i].heartbeat)
 		{
 			heartbeatLastUpdatedTime[i] = osKernelGetTickCount();
 			heartbeatFailCounter[i] = 0;
@@ -955,10 +955,10 @@ void Update_SoftTripStruct()
 {
 	uint8_t trip = 0;
 
-	osStatus_t acquire = osMutexAcquire(MBMSSoftTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
-	osStatus_t batteryAcquire = osMutexAcquire(BatteryInfoMutexHandle, READING_MUTEX_TIMEOUT);
+	osStatus_t MBMSStrip_a1 = osMutexAcquire(MBMSSoftTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
+	osStatus_t batteryInfo_a1 = osMutexAcquire(BatteryInfoMutexHandle, READING_MUTEX_TIMEOUT);
 
-	if (acquire == osOK && batterAcquire == osOK)
+	if (MBMSStrip_a1 == osOK && batteryInfo_a1 == osOK)
 	{
 
 		if (batteryInfo.highCellVoltage > SOFT_MAX_CELL_VOLTAGE)
@@ -999,7 +999,9 @@ void Update_SoftTripStruct()
 	/* Checking contactor high-current soft trips */
 	osStatus_t MBMSStrip_a2 = osMutexAcquire(MBMSSoftTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
 	osStatus_t contactorInfo_a1 = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT);
-	if (contactorInfo_a1 == osOK && MBMSStrip_a2 == osOK)
+	osStatus_t batteryInfo_a2 = osMutexAcquire(BatteryInfoMutexHandle, READING_MUTEX_TIMEOUT);
+
+	if (contactorInfo_a1 == osOK && MBMSStrip_a2 == osOK && batteryInfo_a2 == osOK)
 	{
 		if (contactorInfo[MOTOR].line_current > SOFT_MAX_MOTORS_CONTACTOR_CURRENT)
 		{
@@ -1025,13 +1027,16 @@ void Update_SoftTripStruct()
 			trip = 1;
 		}
 
+		if (batteryInfo.packCurrent > SOFT_MAX_COMMON_CONTACTOR_CURRENT)
+		{
+			mbmsSoftTrips.CMN_high_cur_Strip = 1;
+		}
+
 		// TODO need to check common current (pack current from orion)
 
 		osMutexRelease(ContactorInfoMutexHandle);
 		osMutexRelease(MBMSSoftTripMutexHandle);
 	}
-
-
 
 	if (trip == 1)
 	{
@@ -1055,16 +1060,18 @@ void Check_ContactorHeartbeats()
 			previousHeartbeats[i] = 0;
 		}
 
-		osStatus_t contactorAcquire = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT); // HELEYNA CHECK THIS
+		osStatus_t contactorInfo_a1 = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT); // HELEYNA CHECK THIS
 
-		if (contactorAcquire == osOK)
+		if (contactorInfo_a1 == osOK)
 		{
 			// Check if the heartbeat has not increased since the last check
 			if (previousHeartbeats[i] >= contactorInfo[i].heartbeat)
 			{
 				// Calculate how long this heartbeat has been unchanged.
 				uint32_t difference_ticks = osKernelGetTickCount() - heartbeatLastUpdatedTime[i];
-				float difference_ms = (float) difference_ticks;
+
+
+				float difference_ms = (float) difference_ticks; // TODO smth sketchy check over this
 
 				// If the heartbeat is stuck past the timeout, set the matching hard trip
 				if (difference_ms > CONTACTOR_HEARTBEAT_TIMEOUT)
