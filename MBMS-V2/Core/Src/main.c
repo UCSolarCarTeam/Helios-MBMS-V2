@@ -18,7 +18,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "can_tx.h"
 #include "cmsis_os2.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -214,14 +213,14 @@ static void MX_FDCAN1_Init(void)
   hfdcan1.Instance = FDCAN1;
   hfdcan1.Init.ClockDivider = FDCAN_CLOCK_DIV1;
   hfdcan1.Init.FrameFormat = FDCAN_FRAME_CLASSIC;
-  hfdcan1.Init.Mode = FDCAN_MODE_INTERNAL_LOOPBACK;
+  hfdcan1.Init.Mode = FDCAN_MODE_NORMAL;
   hfdcan1.Init.AutoRetransmission = DISABLE;
   hfdcan1.Init.TransmitPause = DISABLE;
   hfdcan1.Init.ProtocolException = DISABLE;
-  hfdcan1.Init.NominalPrescaler = 5;
+  hfdcan1.Init.NominalPrescaler = 16;
   hfdcan1.Init.NominalSyncJumpWidth = 1;
-  hfdcan1.Init.NominalTimeSeg1 = 7;
-  hfdcan1.Init.NominalTimeSeg2 = 2;
+  hfdcan1.Init.NominalTimeSeg1 = 1;
+  hfdcan1.Init.NominalTimeSeg2 = 1;
   hfdcan1.Init.DataPrescaler = 1;
   hfdcan1.Init.DataSyncJumpWidth = 1;
   hfdcan1.Init.DataTimeSeg1 = 1;
@@ -503,16 +502,16 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(_12V_CAN_EN_GPIO_Port, _12V_CAN_EN_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : MPS_Pin ESD_Pin _12V_Critical_Fault_Pin _14V_Charger_Fault_Pin
+  /*Configure GPIO pins : MPS_Pin ESD_Pin nDCDC_Fault_Pin _14V_Charger_Fault_Pin
                            _12V_Critical_UC_Pin */
-  GPIO_InitStruct.Pin = MPS_Pin|ESD_Pin|_12V_Critical_Fault_Pin|_14V_Charger_Fault_Pin
+  GPIO_InitStruct.Pin = MPS_Pin|ESD_Pin|nDCDC_Fault_Pin|_14V_Charger_Fault_Pin
                           |_12V_Critical_UC_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : nDCDC_Fault_Pin Common_CNTR_Aux_Pin Main_CNTR_Aux_Pin */
-  GPIO_InitStruct.Pin = nDCDC_Fault_Pin|Common_CNTR_Aux_Pin|Main_CNTR_Aux_Pin;
+  /*Configure GPIO pins : DCDC1_Fault_Pin Common_CNTR_Aux_Pin Main_CNTR_Aux_Pin */
+  GPIO_InitStruct.Pin = DCDC1_Fault_Pin|Common_CNTR_Aux_Pin|Main_CNTR_Aux_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);

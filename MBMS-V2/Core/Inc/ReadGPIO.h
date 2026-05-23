@@ -35,15 +35,15 @@
 
 #define DCDC1_EN_ACTIVE 1 // dcdc1 is enabled
 #define _14V_CHARGE_EN_ACTIVE 1 // 14V charge is enabled (o/p)
+#define DCDC1_FAULT_ACTIVE 1 // there is a fault
 #define NDCDC_FAULT_ACTIVE 1 // there is a fault
-#define _12V_CRITICAL_FAULT_ACTIVE 1 // there is a fault
 #define _14V_CHARGER_FAULT_ACTIVE 1 // there is a fault
 #define _12V_CRITICAL_UC_ACTIVE 1 // 12V critical is UC
 
 #define read_DCDC1_EN()							 HAL_GPIO_ReadPin(DCDC1_EN_GPIO_Port, DCDC1_EN_Pin)
 #define	read_14V_Charge_EN()				     HAL_GPIO_ReadPin(_14V_Charge_EN_GPIO_Port, _14V_Charge_EN_Pin)
-#define	read_nDCDC_Fault()	    			 	 HAL_GPIO_ReadPin(nDCDC_Fault_GPIO_Port, nDCDC_Fault_Pin)
-#define	read_12V_Critical_Fault() 				 HAL_GPIO_ReadPin(_12V_Critical_Fault_GPIO_Port,_12V_Critical_Fault_Pin)
+#define	read_DCDC1_Fault()	    			 	 HAL_GPIO_ReadPin(DCDC1_Fault_GPIO_Port, DCDC1_Fault_Pin)
+#define	read_nDCDC_Fault() 				 		 HAL_GPIO_ReadPin(nDCDC_Fault_GPIO_Port,nDCDC_Fault_Pin)
 #define	read_14V_Charger_Fault() 				 HAL_GPIO_ReadPin(_14V_Charger_Fault_GPIO_Port, _14V_Charger_Fault_Pin)
 #define	read_12V_Critical_UC()					 HAL_GPIO_ReadPin(_12V_Critical_UC_GPIO_Port, _12V_Critical_UC_Pin)
 

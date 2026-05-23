@@ -51,7 +51,11 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
-
+/*------ Flag Handles------*/
+osEventFlagsId_t shutoffFlagHandle;
+const osEventFlagsAttr_t shutoffFlag_attributes = {
+                .name = "shutoffFlag"
+};
 /*------ Task Handles------*/
 
 osThreadId_t StartupTaskHandle;
@@ -146,24 +150,11 @@ const osMutexAttr_t ContactorCommandMutex_attributes = {
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
-
-
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
   .priority = (osPriority_t) osPriorityNormal,
   .stack_size = 128 * 4
 };
-
-/* USER CODE BEGIN Flags */
-	osEventFlagsId_t shutoffFlagHandle;
-	const osEventFlagsAttr_t shutoffFlag_attributes = {
-			.name = "shutoffFlag"
-	};
-
-/* USER CODE END Flags */
-
-
-
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -226,8 +217,6 @@ void MX_FREERTOS_Init(void) {
 				);
 
   /* USER CODE END RTOS_QUEUES */
-
-
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 

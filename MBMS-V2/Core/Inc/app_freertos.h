@@ -52,9 +52,6 @@ extern "C" {
 
 /* Exported macro -------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
-
-/* USER CODE END EM */
-extern osThreadId_t defaultTaskHandle;
 extern osThreadId_t StartupTaskHandle;
 extern osThreadId_t canTxTaskHandle;
 extern osThreadId_t canRxTaskHandle;
@@ -78,9 +75,11 @@ extern osMutexId_t BatteryInfoMutexHandle;
 extern osMutexId_t ContactorCommandMutexHandle;
 extern osMutexId_t MBMSStatusMutexHandle;
 
+/* USER CODE END EM */
+extern osThreadId_t defaultTaskHandle;
+
 /* Exported function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
-
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);

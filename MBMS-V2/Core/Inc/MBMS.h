@@ -142,8 +142,8 @@ typedef struct
 {
 	uint8_t DCDC1_en;
 	uint8_t _14V_Charge_EN;
+	uint8_t DCDC1_Fault;
 	uint8_t nDCDC_Fault;
-	uint8_t _12V_Critical_Fault;
 	uint8_t _14V_Charger_Fault;
 	uint8_t _12V_Critical_UC;
 } DCDC_Stack;

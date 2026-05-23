@@ -150,7 +150,7 @@ void send_MBMSStatus() {
 void send_DCDCStack() {
 	CANmsg DCDCStackMsg;
 uint16_t data = ((dcdc_stack.DCDC1_en & 0x1) << 0) + ((dcdc_stack._14V_Charge_EN & 0x1) << 1)
-		+ ((dcdc_stack.nDCDC_Fault & 0x1) << 2) + ((dcdc_stack._12V_Critical_Fault & 0x1) << 3)
+		+ ((dcdc_stack.DCDC1_Fault & 0x1) << 2) + ((dcdc_stack.nDCDC_Fault & 0x1) << 3)
 		+ ((dcdc_stack._14V_Charger_Fault & 0x1) << 4) + ((dcdc_stack._12V_Critical_UC & 0x1) << 5);
 
 DCDCStackMsg.data[0] = (data & 0xff);

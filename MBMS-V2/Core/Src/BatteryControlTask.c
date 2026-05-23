@@ -844,8 +844,8 @@ void Update_DCDCStackStruct(void)
 
 	dcdc_stack.DCDC1_en = read_DCDC1_EN();
 	dcdc_stack._14V_Charge_EN = read_14V_Charge_EN();
+	dcdc_stack.DCDC1_Fault = read_DCDC1_Fault();
 	dcdc_stack.nDCDC_Fault = read_nDCDC_Fault();
-	dcdc_stack._12V_Critical_Fault = read_12V_Critical_Fault();
 	dcdc_stack._14V_Charger_Fault = read_14V_Charger_Fault();
 	dcdc_stack._12V_Critical_UC = read_12V_Critical_UC();
 
