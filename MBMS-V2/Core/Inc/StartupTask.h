@@ -27,8 +27,9 @@ typedef enum
     STARTUP_DCDC1_ON,               // DCDC1 enabled
     STARTUP_12V_CAN_ON,              // NEW: 12V CAN enabled
 
-    STARTUP_MOTORS_ENABLED,         // motor permission granted
-    STARTUP_ARRAY_ENABLED,          // NEW: array permission granted
+    STARTUP_MOTOR1_ENABLED, // motor permission granted
+	STARTUP_MOTOR2_ENABLED,
+	STARTUP_ARRAY_ENABLED,          // NEW: array permission granted
 
     STARTUP_DONE                   // startup done
 } StartupState_t;

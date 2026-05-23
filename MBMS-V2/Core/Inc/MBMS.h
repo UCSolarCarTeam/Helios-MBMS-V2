@@ -24,7 +24,7 @@
 #define CLOSE_CONTACTOR 1
 #define CLOSING_CONTACTOR 1
 
-#define NUM_OF_CNTR 4
+#define NUM_OF_CNTR 5
 #define CONTACTOR_HEARTBEAT_TIMEOUT 1500 // milliseconds
 #define MAX_HEARTBEAT_FAILS 3
 // define here..
@@ -44,7 +44,8 @@
 
 enum Contactors{
 	LV = 0,
-	MOTOR,
+	MOTOR1,
+	MOTOR2,
 	ARRAY,
 	CHARGE
 };
@@ -74,7 +75,8 @@ enum carStates {
 
 typedef struct {
 	uint8_t lv;
-	uint8_t motor;
+	uint8_t motor1;
+	uint8_t motor2;
 	uint8_t array;
 	uint8_t charge;
 	uint8_t startupDone;
@@ -86,7 +88,8 @@ typedef struct {
 
 typedef struct{
 	uint8_t common;
-	uint8_t motor;
+	uint8_t motor1;
+	uint8_t motor2;
 	uint8_t array;
 	uint8_t LV;
 	uint8_t charge;
@@ -157,7 +160,8 @@ typedef struct
 	uint8_t Low_volt_cell_trip;
 	uint8_t CMN_high_cur_trip;
 	uint8_t LV_high_cur_trip;
-	uint8_t MT_high_cur_trip;
+	uint8_t MT1_high_cur_trip;
+	uint8_t MT2_high_cur_trip;
 	uint8_t AR_high_cur_trip;
 	uint8_t CHG_high_cur_trip;
 	uint8_t Reverse_cur_trip;
@@ -166,7 +170,8 @@ typedef struct
 	uint8_t CNTR_connect_trip;
 	uint8_t CMN_no_heartbeat_trip;
 	uint8_t LV_no_heartbeat_trip;
-	uint8_t MT_no_heartbeat_trip;
+	uint8_t MT1_no_heartbeat_trip;
+	uint8_t MT2_no_heartbeat_trip;
 	uint8_t AR_no_heartbeat_trip;
 	uint8_t CHG_no_heartbeat_trip;
 	uint8_t ESD_trip;
@@ -183,7 +188,8 @@ typedef struct
 	uint8_t Low_volt_cell_Strip;
 	uint8_t CMN_high_cur_Strip;
 	uint8_t LV_high_cur_Strip;
-	uint8_t MT_high_cur_Strip;
+	uint8_t MT1_high_cur_Strip;
+	uint8_t MT2_high_cur_Strip;
 	uint8_t AR_high_cur_Strip;
 	uint8_t CHG_high_cur_Strip;
 	uint8_t High_temp_Strip;
