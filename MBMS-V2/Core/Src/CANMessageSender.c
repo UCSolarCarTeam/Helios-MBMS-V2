@@ -123,9 +123,10 @@ void send_ContactorCommand()
 	osStatus_t acquire_1 = osMutexAcquire(ContactorCommandMutexHandle, READING_MUTEX_TIMEOUT);
 	if(acquire_1 == osOK)
 	{
-		contactorCommandMsg.data[0]		= ((contactorCommand.LV & 0x01) << LV)		+
-										  ((contactorCommand.motor & 0x01) << MOTOR) 	+
-										  ((contactorCommand.array & 0x01) << ARRAY)   	+
+		contactorCommandMsg.data[0]		= ((contactorCommand.LV & 0x01)     << LV)      +
+										  ((contactorCommand.motor1 & 0x01) << MOTOR1) 	+
+										  ((contactorCommand.motor2 & 0x01) << MOTOR2) 	+
+										  ((contactorCommand.array & 0x01)  << ARRAY)   +
 										  ((contactorCommand.charge & 0x01) << CHARGE);
 		osMutexRelease(ContactorCommandMutexHandle);
 	}
@@ -186,11 +187,11 @@ void send_MBMSSoftTrips()
 	osStatus_t acquire_4 = osMutexAcquire(MBMSSoftTripMutexHandle, READING_MUTEX_TIMEOUT);
 	if(acquire_4 == osOK)
 	{
-		tripData = ((mbmsSoftTrips.High_volt_cell_Strip & 0x1) << 0)   	+ ((mbmsSoftTrips.Low_volt_cell_Strip & 0x1) << 1)
-				+ ((mbmsSoftTrips.CMN_high_cur_Strip & 0x1) << 2)   			+ ((mbmsSoftTrips.LV_high_cur_Strip & 0x1) << 3)
-				+ ((mbmsSoftTrips.MT_high_cur_Strip & 0x1) << 4)    			+ ((mbmsSoftTrips.AR_high_cur_Strip & 0x1) << 5)
-				+ ((mbmsSoftTrips.CHG_high_cur_Strip & 0x1) << 6)   		    + ((mbmsSoftTrips.High_temp_Strip & 0x1) << 7)
-				+ ((mbmsSoftTrips.Low_temp_Strip & 0x1 << 8));
+		tripData = ((mbmsSoftTrips.High_volt_cell_Strip & 0x1) << 0)   	+	((mbmsSoftTrips.Low_volt_cell_Strip & 0x1) << 1)
+				 + ((mbmsSoftTrips.CMN_high_cur_Strip & 0x1) << 2)       +	((mbmsSoftTrips.LV_high_cur_Strip & 0x1) << 3)
+				 + ((mbmsSoftTrips.MT1_high_cur_Strip & 0x1) << 4)    	+	((mbmsSoftTrips.MT2_high_cur_Strip & 0x1) << 5)
+				 + ((mbmsSoftTrips.AR_high_cur_Strip & 0x1) << 6)        +	((mbmsSoftTrips.CHG_high_cur_Strip & 0x1) << 7)
+				 + ((mbmsSoftTrips.High_temp_Strip & 0x1) << 8)          +	((mbmsSoftTrips.Low_temp_Strip & 0x1 << 9));
 		osMutexRelease(MBMSSoftTripMutexHandle);
 	}
 	tripMsg.data[0] = (tripData & 0xff);
@@ -210,16 +211,17 @@ void send_MBMSTrips()
 	osStatus_t acquire_5 = osMutexAcquire(MBMSTripMutexHandle, READING_MUTEX_TIMEOUT);
 	if(acquire_5 == osOK)
 	{
-		tripData = ((mbmsHardTrips.High_volt_cell_trip & 0x1) << 0)   		  +	((mbmsHardTrips.Low_volt_cell_trip & 0x1) << 1)
-				+ ((mbmsHardTrips.CMN_high_cur_trip & 0x1) << 2)   			 	 + ((mbmsHardTrips.LV_high_cur_trip & 0x1) << 3)
-				+ ((mbmsHardTrips.MT_high_cur_trip & 0x1) << 4)    			 	 + ((mbmsHardTrips.AR_high_cur_trip & 0x1) << 5)
-				+ ((mbmsHardTrips.CHG_high_cur_trip & 0x1) << 6)   			  	+ ((mbmsHardTrips.Reverse_cur_trip & 0x1) << 7)
-				+ ((mbmsHardTrips.OBMS_msg_timeout_trip & 0x1) << 8) 			  + ((mbmsHardTrips.CNTR_disconnect_trip & 0x1) << 9)
-				+ ((mbmsHardTrips.CNTR_connect_trip & 0x1) << 10) 				+ ((mbmsHardTrips.CMN_no_heartbeat_trip & 0x1) << 11)
-				+ ((mbmsHardTrips.LV_no_heartbeat_trip & 0x1) << 12) 			  + ((mbmsHardTrips.MT_no_heartbeat_trip & 0x1) << 13)
-				+ ((mbmsHardTrips.AR_no_heartbeat_trip & 0x1) << 14)			  + ((mbmsHardTrips.CHG_no_heartbeat_trip & 0x1) << 15)
-				+ ((mbmsHardTrips.ESD_trip & 0x1) << 16)		      + ((mbmsHardTrips.High_temp_trip & 0x1) << 17)
-				+ ((mbmsHardTrips.Low_temp_trip & 0x1) << 18);
+		tripData = ((mbmsHardTrips.High_volt_cell_trip & 0x1) << 0)     +	((mbmsHardTrips.Low_volt_cell_trip & 0x1) << 1)
+				+ ((mbmsHardTrips.CMN_high_cur_trip & 0x1) << 2)   	    + ((mbmsHardTrips.LV_high_cur_trip & 0x1) << 3)
+				+ ((mbmsHardTrips.MT1_high_cur_trip & 0x1) << 4)    	+ ((mbmsHardTrips.MT2_high_cur_trip & 0x1) << 5)
+				+ ((mbmsHardTrips.AR_high_cur_trip & 0x1) << 6)			+ ((mbmsHardTrips.CHG_high_cur_trip & 0x1) << 7)
+				+ ((mbmsHardTrips.Reverse_cur_trip & 0x1) << 8)			+ ((mbmsHardTrips.OBMS_msg_timeout_trip & 0x1) << 9)
+				+ ((mbmsHardTrips.CNTR_disconnect_trip & 0x1) << 10)		+ ((mbmsHardTrips.CNTR_connect_trip & 0x1) << 11)
+				+ ((mbmsHardTrips.CMN_no_heartbeat_trip & 0x1) << 12)	+ ((mbmsHardTrips.LV_no_heartbeat_trip & 0x1) << 13)
+				+ ((mbmsHardTrips.MT1_no_heartbeat_trip & 0x1) << 14)   + ((mbmsHardTrips.MT2_no_heartbeat_trip & 0x1) << 15)
+				+ ((mbmsHardTrips.AR_no_heartbeat_trip & 0x1) << 16)	+ ((mbmsHardTrips.CHG_no_heartbeat_trip & 0x1) << 17)
+				+ ((mbmsHardTrips.ESD_trip & 0x1) << 18)		        + ((mbmsHardTrips.High_temp_trip & 0x1) << 19)
+				+ ((mbmsHardTrips.Low_temp_trip & 0x1) << 20);
 		osMutexRelease(MBMSTripMutexHandle);
 	}
 	tripMsg.data[0] = (tripData & 0xff);

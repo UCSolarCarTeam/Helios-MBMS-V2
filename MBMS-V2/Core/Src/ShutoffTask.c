@@ -49,10 +49,12 @@ void Shutoff()
 		HAL_GPIO_WritePin(_14V_Charge_EN_GPIO_Port, _14V_Charge_EN_Pin, !_14V_CHARGE_EN_ACTIVE);
 
 
-		mbmsPermissions.motor = 0;
+		mbmsPermissions.motor1 = 0;
+		mbmsPermissions.motor2 = 0;
 		// wait to open CHECK THIS
-		while(contactorInfo[MOTOR].contactor_close == CLOSE_CONTACTOR) {
-
+		while((contactorInfo[MOTOR1].contactor_close == CLOSE_CONTACTOR) ||
+			  (contactorInfo[MOTOR2].contactor_close == CLOSE_CONTACTOR))
+		{
 		}
 
 		mbmsPermissions.array = 0;
