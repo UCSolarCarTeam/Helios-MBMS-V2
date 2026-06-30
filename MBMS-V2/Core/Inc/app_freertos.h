@@ -59,8 +59,9 @@ extern osThreadId_t defaultTaskHandle;
 extern osThreadId_t StartupTaskHandle;
 extern osThreadId_t canTxTaskHandle;
 extern osThreadId_t canRxTaskHandle;
-extern osThreadId_t ContactorsTaskHandle;
-extern osThreadId_t BatteryTaskHandle;
+extern osThreadId_t CANMessageSenderTaskHandle;
+extern osThreadId_t BatteryControlTaskHandle;
+extern osThreadId_t ShutoffTaskHandle;
 
 extern const osThreadAttr_t StartupTask_attributes; // for shutoff
 

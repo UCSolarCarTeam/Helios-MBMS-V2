@@ -255,12 +255,31 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_THREADS */
 
+//  printf("Heap free: %u\n", xPortGetFreeHeapSize());
   StartupTaskHandle = osThreadNew(StartupTask, NULL, &StartupTask_attributes);
-  ShutoffTaskHandle = osThreadNew(StartupTask, NULL, &ShutoffTask_attributes);
+  if(StartupTaskHandle == NULL) {
+	  uint8_t x = 0;
+  }
+  ShutoffTaskHandle = osThreadNew(ShutoffTask, NULL, &ShutoffTask_attributes);
+  if(ShutoffTaskHandle == NULL) {
+	  uint8_t x = 0;
+  }
   canTxTaskHandle = osThreadNew(CAN_Tx_Task, NULL, &canTxTask_attributes);
+  if(canTxTaskHandle == NULL) {
+	  uint8_t x = 0;
+  }
   canRxTaskHandle = osThreadNew(CAN_Rx_Task, NULL, &canRxTask_attributes);
+  if(canRxTaskHandle == NULL) {
+	  uint8_t x = 0;
+  }
   CANMessageSenderTaskHandle = osThreadNew(CANMessageSenderTask, NULL, &CANMessageSenderTask_attributes);
+  if(CANMessageSenderTaskHandle == NULL) {
+	  uint8_t x = 0;
+  }
   BatteryControlTaskHandle = osThreadNew(BatteryControlTask, NULL, &BatteryControlTask_attributes);
+  if(BatteryControlTaskHandle == NULL) {
+	  uint8_t x = 0;
+  }
 
   shutoffFlagHandle = osEventFlagsNew(&shutoffFlag_attributes);
   /* USER CODE END RTOS_THREADS */
