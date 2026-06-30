@@ -8,6 +8,8 @@
 #ifndef INC_SHUTOFFTASK_H_
 #define INC_SHUTOFFTASK_H_
 
+void ShutoffTask(void* arg);
+void Shutoff();
 
 
 #endif /* INC_SHUTOFFTASK_H_ */

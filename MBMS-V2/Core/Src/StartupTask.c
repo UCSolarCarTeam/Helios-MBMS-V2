@@ -23,7 +23,7 @@
 /* Polling delay used while waiting for MPS/ESD state changes (ms). */
 #define POLL_DELAY_MS       10U
 
-
+#define DBG 0
 
 /* ============================ PERMISSIONS (NO FLAGS) ========================= */
 /* Global permissions structure.
@@ -119,9 +119,9 @@ static void give_array_perms(void)
  */
 static void Startup_Flowchart(void)
 {
-	osStatus_t MBMSStatus_a1 = osMutexAcquire(MBMSStatusMutexHandle, READING_MUTEX_TIMEOUT );
-		if(MBMSStatus_a1 == osOK)
-		{
+//	osStatus_t MBMSStatus_a1 = osMutexAcquire(MBMSStatusMutexHandle, READING_MUTEX_TIMEOUT );
+//		if(MBMSStatus_a1 == osOK)
+//		{
 			/* Startup begins: explicit state so other tasks/logs know startup was entered */
 			mbmsStatus.Startup_state = STARTUP_START;
 
@@ -132,6 +132,7 @@ static void Startup_Flowchart(void)
 			 * ------------------------------------------------------------------------- */
 			mbmsStatus.Startup_state = STARTUP_MPS_OPEN; /* Change #1 */
 
+//#if DBG
 			while (read_MPS() != MPS_ACTIVE)  /* Change #4*/
 			{
 				osDelay(POLL_DELAY_MS);   /* yield CPU while waiting */
@@ -183,11 +184,13 @@ static void Startup_Flowchart(void)
 
 
 			// delays this task, so BCT can run startup checks more times
+			/*
 			while (startup_Check_Counter < 5)
 			{
 				osDelay(POLL_DELAY_MS);
 
 			}
+			*/
 
 
 			/* Checks completed successfully */
@@ -211,7 +214,7 @@ static void Startup_Flowchart(void)
     		 * Enable 12V CAN / front-of-car system power
     		 * - Updates state to record CAN12V enable step
      		* ------------------------------------------------------------------------- */
-
+//#endif
     		// we are precharging here btw !!!!!
    			 HAL_GPIO_WritePin(_12V_CAN_PCHG_GPIO_Port, _12V_CAN_PCHG_Pin, _12V_CAN_PCHG_ACTIVE);
     			while (read_12V_CAN_State() != _12V_CAN_STATE_ACTIVE) {
@@ -231,6 +234,7 @@ static void Startup_Flowchart(void)
    			 /* -------------------------------------------------------------------------
    			  * Permissions: Array contactor
    			  * - NOTE: confirm whether "array contactor" implies charging vs just solar connect
+   			  * -Jenny: array is just the solar array, but we have to be allowed to charge to turn them on
    			  * - Updates state to record array permission step
    			  * ------------------------------------------------------------------------- */
    			 /* NOTE: confirm with team if "array contactor" implies charging or just solar connect */
@@ -244,8 +248,8 @@ static void Startup_Flowchart(void)
    			 osThreadTerminate(StartupTaskHandle);
 			}
 
-		osMutexRelease(MBMSStatusMutexHandle);
-}
+//		osMutexRelease(MBMSStatusMutexHandle);
+//}
 
 
 
