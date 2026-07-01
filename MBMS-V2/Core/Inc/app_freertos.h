@@ -17,7 +17,6 @@
   */
 /* USER CODE END Header */
 
-
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __APP_FREERTOS_H
 #define __APP_FREERTOS_H
@@ -28,7 +27,7 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #include "FreeRTOS.h"
 #include "task.h"
-#include "main.h" 
+#include "main.h"
 #include "cmsis_os2.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -53,8 +52,6 @@ extern "C" {
 
 /* Exported macro -------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
-
-/* USER CODE END EM */
 extern osThreadId_t defaultTaskHandle;
 extern osThreadId_t StartupTaskHandle;
 extern osThreadId_t canTxTaskHandle;
@@ -84,19 +81,18 @@ extern osMutexId_t ContactorCommandMutexHandle;
 extern osMutexId_t MBMSStatusMutexHandle;
 extern osMutexId_t DCDCStackMutexHandle;
 extern osMutexId_t PermissionsMutexHandle;
+/* USER CODE END EM */
 
 /* Exported function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
 
 /* USER CODE END FunctionPrototypes */
 
-void StartDefaultTask(void *argument);
-
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-
+void StartDefaultTask(void *argument);
 /* USER CODE END Application */
 
 #ifdef __cplusplus

@@ -19,11 +19,11 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os2.h"
-#include "can_tx.h"
+
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "can_tx.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -109,12 +109,11 @@ int main(void)
   MX_UART4_Init();
   MX_USB_PCD_Init();
   /* USER CODE BEGIN 2 */
-  CAN_Tx_Init();
+
   /* USER CODE END 2 */
 
   /* Init scheduler */
   osKernelInitialize();
-  size_t heap = xPortGetFreeHeapSize();
   /* Call init function for freertos objects (in app_freertos.c) */
   MX_FREERTOS_Init();
 
@@ -222,7 +221,7 @@ static void MX_FDCAN1_Init(void)
   hfdcan1.Init.DataTimeSeg1 = 1;
   hfdcan1.Init.DataTimeSeg2 = 1;
   hfdcan1.Init.StdFiltersNbr = 0;
-  hfdcan1.Init.ExtFiltersNbr = 0;
+  hfdcan1.Init.ExtFiltersNbr = 4;
   hfdcan1.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
   if (HAL_FDCAN_Init(&hfdcan1) != HAL_OK)
   {
@@ -231,13 +230,16 @@ static void MX_FDCAN1_Init(void)
   /* USER CODE BEGIN FDCAN1_Init 2 */
   FDCAN_FilterTypeDef packInfoFilter;
 
+
+  HAL_FDCAN_ConfigGlobalFilter(&hfdcan1, FDCAN_REJECT, FDCAN_REJECT, FDCAN_FILTER_REMOTE, FDCAN_FILTER_REMOTE);
+
+
   packInfoFilter.IdType 			= FDCAN_EXTENDED_ID; //used in canmsg
   packInfoFilter.FilterIndex		= 0;
   packInfoFilter.FilterType 		= FDCAN_FILTER_MASK;
   packInfoFilter.FilterConfig	    = FDCAN_FILTER_TO_RXFIFO0;
   packInfoFilter.FilterID1		    = PACK_INFO_ID;
-  packInfoFilter.FilterID2			= 0x1FFFFFFF;
-//STM32H5 stores ID as a normal 11-bit or 29-bit number in FILTERID1/FILTERID2 so >>13/<<3 not needed
+  packInfoFilter.FilterID2			= 0x1fffffff;
 
   if(HAL_FDCAN_ConfigFilter(&hfdcan1, &packInfoFilter) != HAL_OK)
   {
@@ -249,8 +251,8 @@ static void MX_FDCAN1_Init(void)
   tempInfoFilter.FilterIndex		= 1;
   tempInfoFilter.FilterType 		= FDCAN_FILTER_MASK;
   tempInfoFilter.FilterConfig	    = FDCAN_FILTER_TO_RXFIFO0;
-  tempInfoFilter.FilterID1		    = TEMP_INFO_ID;
-  tempInfoFilter.FilterID2			= 0x1FFFFFFF;
+  tempInfoFilter.FilterID1		    = MIN_MAX_VOLTAGES_ID;
+  tempInfoFilter.FilterID2			= 0x1fffffff;
 
   if(HAL_FDCAN_ConfigFilter(&hfdcan1, &tempInfoFilter) != HAL_OK)
   {
@@ -262,8 +264,8 @@ static void MX_FDCAN1_Init(void)
   maxminVoltagedFilter.FilterIndex		= 2;
   maxminVoltagedFilter.FilterType 		= FDCAN_FILTER_MASK;
   maxminVoltagedFilter.FilterConfig	    = FDCAN_FILTER_TO_RXFIFO0;
-  maxminVoltagedFilter.FilterID1		= MIN_MAX_VOLTAGES_ID;
-  maxminVoltagedFilter.FilterID2	 	= 0x1FFFFFFF;
+  maxminVoltagedFilter.FilterID1		= TEMP_INFO_ID;
+  maxminVoltagedFilter.FilterID2	 	= 0x1fffffff;
 
   if(HAL_FDCAN_ConfigFilter(&hfdcan1, &maxminVoltagedFilter) != HAL_OK)
   {
@@ -276,14 +278,14 @@ static void MX_FDCAN1_Init(void)
   contactorFilter.FilterType 		= FDCAN_FILTER_MASK;
   contactorFilter.FilterConfig	    = FDCAN_FILTER_TO_RXFIFO0;
   contactorFilter.FilterID1		    = CONTACTOR_ID;
-  contactorFilter.FilterID2	 	    = CONTACTOR_MASK;
+  contactorFilter.FilterID2	 	    = CONTACTOR_MASK; // look at CAN.h for contactormask
 
   if(HAL_FDCAN_ConfigFilter(&hfdcan1, &contactorFilter) != HAL_OK)
   {
 	  Error_Handler();
   }
-  HAL_CAN_Start(&hfdcan1);
-  HAL_CAN_ActivateNotification(&hfdcan1, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_RX_FIFO0_FULL | CAN_IT_RX_FIFO1_MSG_PENDING | CAN_IT_RX_FIFO1_FULL);
+  HAL_FDCAN_Start(&hfdcan1);
+  HAL_FDCAN_ActivateNotification(&hfdcan1, FDCAN_IT_RX_FIFO0_NEW_MESSAGE | FDCAN_IT_RX_FIFO0_FULL | FDCAN_IT_RX_FIFO1_NEW_MESSAGE | FDCAN_IT_RX_FIFO1_FULL, 0);
 
   /* USER CODE END FDCAN1_Init 2 */
 

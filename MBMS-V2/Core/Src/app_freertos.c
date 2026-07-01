@@ -168,24 +168,12 @@ const osMutexAttr_t PermissionsMutex_attributes = {
       .attr_bits = osMutexPrioInherit,
 };
 
-/* USER CODE END Variables */
-/* Definitions for defaultTask */
-osThreadId_t defaultTaskHandle;
-
-
-const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
-  .priority = (osPriority_t) osPriorityNormal,
-  .stack_size = 128 * 4
+osEventFlagsId_t shutoffFlagHandle;
+const osEventFlagsAttr_t shutoffFlag_attributes = {
+    .name = "shutoffFlag"
 };
 
-/* USER CODE BEGIN Flags */
-	osEventFlagsId_t shutoffFlagHandle;
-	const osEventFlagsAttr_t shutoffFlag_attributes = {
-			.name = "shutoffFlag"
-	};
-
-/* USER CODE END Flags */
+/* USER CODE END Variables */
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -201,6 +189,7 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
+
   /* USER CODE BEGIN RTOS_MUTEX */
 
 	MBMSTripMutexHandle = osMutexNew(&MBMSTripMutex_attributes);
@@ -250,14 +239,6 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE END RTOS_QUEUES */
 
-
-  /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
-
-  if (defaultTaskHandle == NULL)
-  {
-      while (1);
-  }
   /* USER CODE BEGIN RTOS_THREADS */
 
 //  printf("Heap free: %u\n", xPortGetFreeHeapSize());
@@ -297,28 +278,7 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_EVENTS */
 
 }
-/* USER CODE BEGIN Header_StartDefaultTask */
-/**
-* @brief Function implementing the defaultTask thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument)
-{
-  /* USER CODE BEGIN defaultTask */
-  /* Infinite loop */
-(void)argument;
 
-
-  for (;;)
-  {
-
-	  osDelay(1000);
-  }
-
-  /* USER CODE END defaultTask */
-}
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
 

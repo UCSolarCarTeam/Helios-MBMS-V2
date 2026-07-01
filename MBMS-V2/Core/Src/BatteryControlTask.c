@@ -1327,9 +1327,11 @@ void Update_BatteryInfoStruct(void) // updating Orion / battery info struct
         // Check if this message contains pack-level information
         if (batteryMsg.extendedID == PACK_INFO_ID)
         {
+
         	osStatus_t Batteryinfo_a4 = osMutexAcquire(BatteryInfoMutexHandle, UPDATING_MUTEX_TIMEOUT );
         	if(Batteryinfo_a4 == osOK)
         	{
+        		pack_info_counter++;
 				// Ensure message has enough bytes
 				if (batteryMsg.DLC >= 8) // ?? its ok -m
 				{
@@ -1351,10 +1353,7 @@ void Update_BatteryInfoStruct(void) // updating Orion / battery info struct
 
 				osMutexRelease(BatteryInfoMutexHandle);
 			}
-
         }
-
-
 
 			// Check if this message contains temperature data
 			else if (batteryMsg.extendedID == TEMP_INFO_ID)
@@ -1362,6 +1361,7 @@ void Update_BatteryInfoStruct(void) // updating Orion / battery info struct
 	        	osStatus_t Batteryinfo_a5 = osMutexAcquire(BatteryInfoMutexHandle, UPDATING_MUTEX_TIMEOUT );
 	        	if(Batteryinfo_a5 == osOK)
 	        	{
+	        		temp_info_counter++;
 					// Ensure message has enough bytes
 					if (batteryMsg.DLC >= 5)
 					{
@@ -1384,6 +1384,7 @@ void Update_BatteryInfoStruct(void) // updating Orion / battery info struct
 	        	osStatus_t Batteryinfo_a6 = osMutexAcquire(BatteryInfoMutexHandle, UPDATING_MUTEX_TIMEOUT );
 	        	if(Batteryinfo_a6 == osOK)
 	        	{
+	        		cell_voltages_counter++;
 					if (batteryMsg.DLC >= 6) // check also
 					{
 						// Lowest cell voltage (2 bytes, scaled by 10000)
