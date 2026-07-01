@@ -174,7 +174,7 @@ static void Startup_Flowchart(void)
 			mbmsStatus.Startup_state = STARTUP_ESD_RELEASED;
 
 			// wait for main and common contactor to be closed
-			while (read_Common_CNTR_Aux() != MAIN_CNTR_AUX_ACTIVE || read_Main_CNTR_Aux() != MAIN_CNTR_AUX_ACTIVE)
+	while (read_Common_CNTR_Aux() != MAIN_CNTR_AUX_ACTIVE || read_Main_CNTR_Aux() != MAIN_CNTR_AUX_ACTIVE)
 			{
 				osDelay(POLL_DELAY_MS);
 			}
@@ -184,13 +184,12 @@ static void Startup_Flowchart(void)
 
 
 			// delays this task, so BCT can run startup checks more times
-			/*
 			while (startup_Check_Counter < 5)
 			{
 				osDelay(POLL_DELAY_MS);
 
 			}
-			*/
+
 
 
 			/* Checks completed successfully */

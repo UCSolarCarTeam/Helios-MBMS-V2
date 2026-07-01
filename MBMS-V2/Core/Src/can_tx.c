@@ -54,6 +54,7 @@ void CAN_Tx_Task(void *argument) //tasks run forever if theres nothing to return
 	CANmsg msg;
 
 
+	uint32_t taskTickLastStart = osKernelGetTickCount();
 	for(;;)
 	{
 		//wait for message to appear
@@ -79,7 +80,8 @@ void CAN_Tx_Task(void *argument) //tasks run forever if theres nothing to return
 		// CAN_Tx_Send(&msg) transmits the CAN frame using the HAL
 		//CAN_Tx_Send returns HAL_StatusTypeDef(HAL_OK ECT)
 
-
+		taskTickLastStart += 10;
+		osDelayUntil(taskTickLastStart);
 	}
 }
 

@@ -28,6 +28,7 @@
 #include "BatteryControlTask.h"
 #include "StartupTask.h"
 #include "CANMessageSender.h"
+#include "ShutoffTask.h"
 
 
 
@@ -253,6 +254,10 @@ void MX_FREERTOS_Init(void) {
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
+  if (defaultTaskHandle == NULL)
+  {
+      while (1);
+  }
   /* USER CODE BEGIN RTOS_THREADS */
 
 //  printf("Heap free: %u\n", xPortGetFreeHeapSize());
@@ -276,10 +281,13 @@ void MX_FREERTOS_Init(void) {
   if(CANMessageSenderTaskHandle == NULL) {
 	  uint8_t x = 0;
   }
+  size_t heap2 = xPortGetFreeHeapSize();
+
   BatteryControlTaskHandle = osThreadNew(BatteryControlTask, NULL, &BatteryControlTask_attributes);
   if(BatteryControlTaskHandle == NULL) {
 	  uint8_t x = 0;
   }
+  size_t heap3 = xPortGetFreeHeapSize();
 
   shutoffFlagHandle = osEventFlagsNew(&shutoffFlag_attributes);
   /* USER CODE END RTOS_THREADS */

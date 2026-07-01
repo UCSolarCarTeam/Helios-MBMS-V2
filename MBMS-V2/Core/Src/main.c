@@ -114,6 +114,7 @@ int main(void)
 
   /* Init scheduler */
   osKernelInitialize();
+  size_t heap = xPortGetFreeHeapSize();
   /* Call init function for freertos objects (in app_freertos.c) */
   MX_FREERTOS_Init();
 
@@ -281,6 +282,9 @@ static void MX_FDCAN1_Init(void)
   {
 	  Error_Handler();
   }
+  HAL_CAN_Start(&hfdcan1);
+  HAL_CAN_ActivateNotification(&hfdcan1, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_RX_FIFO0_FULL | CAN_IT_RX_FIFO1_MSG_PENDING | CAN_IT_RX_FIFO1_FULL);
+
   /* USER CODE END FDCAN1_Init 2 */
 
 }

@@ -27,42 +27,41 @@ static void CAN_Rx(void);
 void CAN_Rx_Task(void *argument)
 {
 	(void)argument;
+	uint32_t taskTickLastStart = osKernelGetTickCount();
 	for(;;)
 	{//RTOS tasks run forever. CAN_Rx_Task will sit in this forever loop always checking for new CAN frames.
 		CAN_Rx();
+		taskTickLastStart += 10;
+		osDelayUntil(taskTickLastStart);
 	}
 }
 
 static void CAN_Rx()
 {
 
+	CANmsg msg;
 
- CANmsg msg;
+	osStatus_t status = osMessageQueueGet(canRxQueueHandle, &msg, 0, osWaitForever);
 
- osStatus_t status = osMessageQueueGet(canRxQueueHandle, &msg, 0, osWaitForever);
-
- 	 if(status != osOK)
- 	 {
- 		 Error_Handler();
+	 if(status != osOK)
+	 {
+		 Error_Handler();
 
 	 //HAL_GPIO_TogglePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
- 	 }
+	 }
 
- 	 else if (status == osOK)
+ 	 else
  	 {
 
  		 messages_got_yay++;
 
-
  		 if(msg.extendedID == PACK_INFO_ID || msg.extendedID == TEMP_INFO_ID || msg.extendedID == CELL_VOLTAGES_ID || msg.extendedID == MIN_MAX_VOLTAGES_ID )
  		 {
-
  			 status = osMessageQueuePut(BatteryQueueHandle, &msg, 0, osWaitForever);
 
  			 if(status != osOK)
  			 {
  				 batteryqueuefull++;
-
  			 }
 
 			 else
@@ -70,7 +69,6 @@ static void CAN_Rx()
 				 orion_message_added++;
 			 }
  		 }
-
 
  		 else if((msg.extendedID & CONTACTOR_MASK) == CONTACTOR_HEARTBEAT)
  		 {
@@ -93,7 +91,7 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef * hfdcan, uint32_t RxFifo0ITs
 	    CANmsg msg = {0};
 	    FDCAN_RxHeaderTypeDef rxHeader;
 
-		if (HAL_FDCAN_GetRxMessage(&hfdcan1, FDCAN_RX_FIFO0, &rxHeader, msg.data) != HAL_OK)//Try and read one CAN frame from the RX FIFO
+		if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &rxHeader, msg.data) != HAL_OK)//Try and read one CAN frame from the RX FIFO
 		{
 			return;
 		}
