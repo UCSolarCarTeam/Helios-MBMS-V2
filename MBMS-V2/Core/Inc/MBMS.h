@@ -64,13 +64,13 @@ enum startupStates {
 };
 
 enum carStates {
-	BOOT,
-	STARTUP,
-	FULLY_OPERATIONAL,
-	CHARGING,
-	BPS_FAULT,
-	MPS_DISCONNECTED,
-	SOFT_TRIP
+	BOOT, //0
+	STARTUP, //1
+	FULLY_OPERATIONAL, //2
+	CHARGING, //3
+	BPS_FAULT, //4
+	MPS_DISCONNECTED, //5
+	SOFT_TRIP //6
 };
 
 typedef struct {

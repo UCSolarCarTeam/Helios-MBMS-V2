@@ -103,6 +103,27 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef * hfdcan, uint32_t RxFifo0ITs
 		(void)osMessageQueuePut(canRxQueueHandle, &msg, 0, 0);
 }
 
+void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef * hfdcan, uint32_t RxFifo1ITs)
+{
+
+		if ((RxFifo1ITs & FDCAN_IT_RX_FIFO1_NEW_MESSAGE) == 0U) //&hfdcan1 is the CAN peripheral, FDCAN_RX/////-FIFO0 tells HALL to check FIFO 0, this function will return a number which will tell us how many messages are currently stored in RX FIFO
+			return;
+	    g_rx_cb_hits++;
+
+	    CANmsg msg = {0};
+	    FDCAN_RxHeaderTypeDef rxHeader;
+
+		if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO1, &rxHeader, msg.data) != HAL_OK)//Try and read one CAN frame from the RX FIFO
+		{
+			return;
+		}
+
+		msg.extendedID				= rxHeader.Identifier; //full id no matter what
+		msg.ID						= (uint16_t)(rxHeader.Identifier & 0x7FF); //mask CAN id with 0x7ff to keep the 11 bits
+		msg.DLC						= rxHeader.DataLength;
+
+		(void)osMessageQueuePut(canRxQueueHandle, &msg, 0, 0);
+}
 
 
 

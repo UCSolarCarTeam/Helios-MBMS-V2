@@ -261,6 +261,7 @@ void StartupTask(void *argument)
 {
     (void)argument;      /* argument not used */
 
+	enter_BOOT();
     Startup_Flowchart(); /* run the full startup sequence */
 
     /* Safety fallback in case Startup_Flowchart ever returns */

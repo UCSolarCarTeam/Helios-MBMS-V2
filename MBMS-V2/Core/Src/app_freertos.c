@@ -174,6 +174,13 @@ const osEventFlagsAttr_t shutoffFlag_attributes = {
 };
 
 /* USER CODE END Variables */
+/* Definitions for defaultTask */
+osThreadId_t defaultTaskHandle;
+const osThreadAttr_t defaultTask_attributes = {
+  .name = "defaultTask",
+  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 128 * 4
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -238,6 +245,8 @@ void MX_FREERTOS_Init(void) {
 				);
 
   /* USER CODE END RTOS_QUEUES */
+  /* creation of defaultTask */
+  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
 
@@ -277,6 +286,23 @@ void MX_FREERTOS_Init(void) {
   /* add events, ... */
   /* USER CODE END RTOS_EVENTS */
 
+}
+/* USER CODE BEGIN Header_StartDefaultTask */
+/**
+* @brief Function implementing the defaultTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartDefaultTask */
+void StartDefaultTask(void *argument)
+{
+  /* USER CODE BEGIN defaultTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END defaultTask */
 }
 
 /* Private application code --------------------------------------------------*/

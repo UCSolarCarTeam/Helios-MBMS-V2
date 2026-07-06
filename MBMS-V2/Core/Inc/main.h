@@ -78,6 +78,12 @@ void Error_Handler(void);
 #define _12V_Critical_UC_GPIO_Port GPIOE
 #define DCDC1_EN_Pin GPIO_PIN_11
 #define DCDC1_EN_GPIO_Port GPIOE
+#define DB_B_Pin GPIO_PIN_13
+#define DB_B_GPIO_Port GPIOD
+#define DB_G_Pin GPIO_PIN_14
+#define DB_G_GPIO_Port GPIOD
+#define DB_R_Pin GPIO_PIN_15
+#define DB_R_GPIO_Port GPIOD
 #define _12V_CAN_State_Pin GPIO_PIN_6
 #define _12V_CAN_State_GPIO_Port GPIOC
 #define _12V_CAN_PCHG_Pin GPIO_PIN_7

@@ -13,6 +13,8 @@
 #include <stdbool.h>
 #include <app_freertos.h>
 
+#define test_with_CCPs 0 // comment out the trips for heartbeats..
+
 uint32_t BCT_start_tick = 0;
 uint32_t BCT_end_tick = 0;
 uint32_t BCT_difference_tick = 0;
@@ -139,8 +141,12 @@ void BatteryControl() {
 
 void enter_BOOT()
 {
+	HAL_GPIO_WritePin(DB_R_GPIO_Port, DB_R_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(DB_B_GPIO_Port, DB_B_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(DB_G_GPIO_Port, DB_G_Pin, GPIO_PIN_SET);
 
     /* 1. Set system state to BOOT */
+	mbmsStatus.System_state = BOOT;
     carState = BOOT;
 
     /* 2. Clear all trip conditions */
@@ -203,6 +209,7 @@ void enter_MPS_DISCONNECTED()
 {
 	//mbmsHardTrips
 	carState = MPS_DISCONNECTED;
+	mbmsStatus.System_state = MPS_DISCONNECTED;
 	osStatus_t Permissions_a2 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
 	if(Permissions_a2 == osOK)
 	{
@@ -218,6 +225,10 @@ void enter_MPS_DISCONNECTED()
 
 void enter_BPS_FAULT()
 {
+	HAL_GPIO_WritePin(DB_R_GPIO_Port, DB_R_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(DB_B_GPIO_Port, DB_B_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(DB_G_GPIO_Port, DB_G_Pin, GPIO_PIN_RESET);
+
 	HAL_GPIO_WritePin(BPS_Fault_GPIO_Port, BPS_Fault_Pin, BPS_FAULT_ACTIVE); // strobe enabling essentially
 	osStatus_t Permissions_a3 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
 	if(Permissions_a3 == osOK)
@@ -225,6 +236,7 @@ void enter_BPS_FAULT()
 		mbmsPermissions.faulted = 1;
 		osMutexRelease(PermissionsMutexHandle);
 	}
+	mbmsStatus.System_state = BPS_FAULT;
 	carState = BPS_FAULT;
 
 	osStatus_t MBMSStatus_a2 = osMutexAcquire(MBMSStatusMutexHandle, UPDATING_MUTEX_TIMEOUT);
@@ -243,6 +255,11 @@ void enter_BPS_FAULT()
 
 void enter_SOFT_TRIP()
 {
+	HAL_GPIO_WritePin(DB_R_GPIO_Port, DB_R_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(DB_B_GPIO_Port, DB_B_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(DB_G_GPIO_Port, DB_G_Pin, GPIO_PIN_RESET);
+
+	mbmsStatus.System_state = SOFT_TRIP;
 	carState = SOFT_TRIP;
 	osStatus_t Permissions_a4 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
 	if(Permissions_a4 == osOK)
@@ -257,6 +274,11 @@ void enter_SOFT_TRIP()
 
 void enter_CHARGING()
 {
+	HAL_GPIO_WritePin(DB_R_GPIO_Port, DB_R_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(DB_B_GPIO_Port, DB_B_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(DB_G_GPIO_Port, DB_G_Pin, GPIO_PIN_SET);
+
+	mbmsStatus.System_state = CHARGING;
 	carState = CHARGING;
 }
 
@@ -265,7 +287,11 @@ void enter_CHARGING()
 
 void enter_FULLY_OPERATIONAL()
 {
+	HAL_GPIO_WritePin(DB_R_GPIO_Port, DB_R_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(DB_B_GPIO_Port, DB_B_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(DB_G_GPIO_Port, DB_G_Pin, GPIO_PIN_SET);
 	carState = FULLY_OPERATIONAL;
+	mbmsStatus.System_state = FULLY_OPERATIONAL;
 }
 
 
@@ -274,12 +300,14 @@ void enter_FULLY_OPERATIONAL()
 /* Startup enter_SOFT_TRIPs */
 void startupCheck() // change after this function is done: waitForFirstHeartbeats
 {
+#if test_with_CCPs
     /* Run startup gate checks in order. If any fail, enter fault. */
     if (waitForFirstHeartbeats())
     {
         enter_BPS_FAULT();   // preferred name from your header
         return;
     }
+#endif
 
     // dont want this to run during startup state when contactors can be closed/closing
 //    if (!checkContactorsOpen() || !checkPrechargersOpen())
@@ -490,7 +518,7 @@ void SystemStateMachine()
 	// Make  is plugged in to stand in for the CAN msg
 	uint8_t plugged = read_EVCC_12V_SW() == EVCC_12V_SW_ACTIVE;
 
-	switch (carState)
+	switch (carState) // switch to mbmsStatus.systemstate but make sure u update all the states and have all the enter funcs!!!
 	{
 	case BOOT:
 		// checking that all cntrs and pchgs r open initially
@@ -534,7 +562,7 @@ void SystemStateMachine()
 		osStatus_t MBMSStatus_a3 = osMutexAcquire(MBMSStatusMutexHandle, READING_MUTEX_TIMEOUT );
 		if(MBMSStatus_a3 == osOK)
 		{
-			if(mbmsStatus.Startup_state == COMPLETED)
+			if(mbmsStatus.Startup_state == STARTUP_DONE)
 			{
 				enter_FULLY_OPERATIONAL();
 			}
@@ -594,7 +622,9 @@ void SystemStateMachine()
 			osMutexRelease(PermissionsMutexHandle);
 
 		}
+#if test_with_CCPs
 		Check_ContactorHeartbeats();
+#endif
 		Update_SoftTripStruct();
 		Update_TripStruct();
 
@@ -698,8 +728,9 @@ void SystemStateMachine()
 			enter_MPS_DISCONNECTED();
 			break;
 		}
-
+#if test_with_CCPs
 		Check_ContactorHeartbeats();
+#endif
 		Update_TripStruct();
 		break;
 	}
@@ -1388,13 +1419,13 @@ void Update_BatteryInfoStruct(void) // updating Orion / battery info struct
 					if (batteryMsg.DLC >= 6) // check also
 					{
 						// Lowest cell voltage (2 bytes, scaled by 10000)
-						batteryInfo.lowCellVoltage    = (float)((uint16_t)(data[0] | (data[1] << 8))) / 10000.0f;
+						batteryInfo.lowCellVoltage    = (float)((uint16_t)(data[0] | (data[1] << 8))) / 10.0f; //was 10000 cuz i think volts, but if mV then.. :3
 
 						// ID/index of lowest voltage cell
 						batteryInfo.lowCellVoltageID  = data[2];
 
 						// Highest cell voltage (2 bytes, scaled by 10000)
-						batteryInfo.highCellVoltage   = (float)((uint16_t)(data[3] | (data[4] << 8))) / 10000.0f;
+						batteryInfo.highCellVoltage   = (float)((uint16_t)(data[3] | (data[4] << 8))) / 10.0f;
 
 						// ID/index of highest voltage cell
 						batteryInfo.highCellVoltageID = data[5];

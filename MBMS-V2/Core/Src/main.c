@@ -20,7 +20,6 @@
 #include "main.h"
 #include "cmsis_os2.h"
 
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "can_tx.h"
@@ -508,6 +507,9 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(DCDC1_EN_GPIO_Port, DCDC1_EN_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOD, DB_B_Pin|DB_G_Pin|DB_R_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, _12V_CAN_PCHG_Pin|BPS_Fault_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
@@ -536,6 +538,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(DCDC1_EN_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : DB_B_Pin DB_G_Pin DB_R_Pin */
+  GPIO_InitStruct.Pin = DB_B_Pin|DB_G_Pin|DB_R_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
   /*Configure GPIO pin : _12V_CAN_State_Pin */
   GPIO_InitStruct.Pin = _12V_CAN_State_Pin;
