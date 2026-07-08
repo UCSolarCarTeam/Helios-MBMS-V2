@@ -579,6 +579,7 @@ void SystemStateMachine()
 			break;
 		}
 
+		// if EVCC_12V_Sw is enabled and OBMS sends charge_en active
 		if(plugged && (read_Charge_EN() == CHARGE_ENABLE_ACTIVE))
 		{
 			osStatus_t Permissions_a5 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
@@ -691,8 +692,9 @@ void SystemStateMachine()
 			}
 			osMutexRelease(ContactorInfoMutexHandle);
 		}
-
+#if test_with_CCPs
 		Check_ContactorHeartbeats();
+#endif
 		Update_SoftTripStruct();
 		Update_TripStruct();
 
@@ -1348,6 +1350,9 @@ void Update_BatteryInfoStruct(void) // updating Orion / battery info struct
     	{
         // Indicate CAN communication is healthy
     		mbmsStatus.OBMS_CAN_RR = 1;
+    		//read charge/discharge en from obms
+    		mbmsStatus.charge_enable = read_14V_Charge_EN();
+    		mbmsStatus.discharge_enable = read_Discharge_EN();
     		osMutexRelease(MBMSStatusMutexHandle);
     	}
 
