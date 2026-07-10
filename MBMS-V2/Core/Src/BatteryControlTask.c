@@ -146,7 +146,12 @@ void enter_BOOT()
 	HAL_GPIO_WritePin(DB_G_GPIO_Port, DB_G_Pin, GPIO_PIN_SET);
 
     /* 1. Set system state to BOOT */
-	mbmsStatus.System_state = BOOT;
+	osStatus_t mbmsStatus_a1 = osMutexAcquire(MBMSStatusMutexHandle, UPDATING_MUTEX_TIMEOUT );
+	if(mbmsStatus_a1 == osOK) {
+		mbmsStatus.System_state = BOOT;
+		osMutexRelease(MBMSStatusMutexHandle);
+	}
+
     carState = BOOT;
 
     /* 2. Clear all trip conditions */
@@ -209,7 +214,12 @@ void enter_MPS_DISCONNECTED()
 {
 	//mbmsHardTrips
 	carState = MPS_DISCONNECTED;
-	mbmsStatus.System_state = MPS_DISCONNECTED;
+	osStatus_t mbmsStatus_a1 = osMutexAcquire(MBMSStatusMutexHandle, UPDATING_MUTEX_TIMEOUT );
+	if(mbmsStatus_a1 == osOK) {
+		mbmsStatus.System_state = MPS_DISCONNECTED;
+		osMutexRelease(MBMSStatusMutexHandle);
+	}
+
 	osStatus_t Permissions_a2 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
 	if(Permissions_a2 == osOK)
 	{
@@ -236,16 +246,15 @@ void enter_BPS_FAULT()
 		mbmsPermissions.faulted = 1;
 		osMutexRelease(PermissionsMutexHandle);
 	}
-	mbmsStatus.System_state = BPS_FAULT;
-	carState = BPS_FAULT;
 
-	osStatus_t MBMSStatus_a2 = osMutexAcquire(MBMSStatusMutexHandle, UPDATING_MUTEX_TIMEOUT);
-	if(MBMSStatus_a2)
-	{
-		// update mbms status
+	osStatus_t mbmsStatus_a1 = osMutexAcquire(MBMSStatusMutexHandle, UPDATING_MUTEX_TIMEOUT);
+	if(mbmsStatus_a1 == osOK) {
+		mbmsStatus.System_state = BPS_FAULT;
 		mbmsStatus.BPS_Fault = 1;
 		osMutexRelease(MBMSStatusMutexHandle);
 	}
+	carState = BPS_FAULT;
+
 	osEventFlagsSet(shutoffFlagHandle, (HARD_BAT_LIMIT_FLAG | SHUTOFF_FLAG));
 }
 
@@ -259,7 +268,11 @@ void enter_SOFT_TRIP()
 	HAL_GPIO_WritePin(DB_B_GPIO_Port, DB_B_Pin, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(DB_G_GPIO_Port, DB_G_Pin, GPIO_PIN_RESET);
 
-	mbmsStatus.System_state = SOFT_TRIP;
+	osStatus_t mbmsStatus_a1 = osMutexAcquire(MBMSStatusMutexHandle, UPDATING_MUTEX_TIMEOUT );
+	if(mbmsStatus_a1 == osOK) {
+		mbmsStatus.System_state = SOFT_TRIP;
+		osMutexRelease(MBMSStatusMutexHandle);
+	}
 	carState = SOFT_TRIP;
 	osStatus_t Permissions_a4 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
 	if(Permissions_a4 == osOK)
@@ -278,7 +291,11 @@ void enter_CHARGING()
 	HAL_GPIO_WritePin(DB_B_GPIO_Port, DB_B_Pin, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(DB_G_GPIO_Port, DB_G_Pin, GPIO_PIN_SET);
 
-	mbmsStatus.System_state = CHARGING;
+	osStatus_t mbmsStatus_a1 = osMutexAcquire(MBMSStatusMutexHandle, UPDATING_MUTEX_TIMEOUT );
+	if(mbmsStatus_a1 == osOK) {
+		mbmsStatus.System_state = CHARGING;
+		osMutexRelease(MBMSStatusMutexHandle);
+	}
 	carState = CHARGING;
 }
 
@@ -290,8 +307,16 @@ void enter_FULLY_OPERATIONAL()
 	HAL_GPIO_WritePin(DB_R_GPIO_Port, DB_R_Pin, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(DB_B_GPIO_Port, DB_B_Pin, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(DB_G_GPIO_Port, DB_G_Pin, GPIO_PIN_SET);
+
 	carState = FULLY_OPERATIONAL;
-	mbmsStatus.System_state = FULLY_OPERATIONAL;
+
+//	osStatus_t mbmsStatus_a1 = osMutexAcquire(MBMSStatusMutexHandle, UPDATING_MUTEX_TIMEOUT );
+//	if(mbmsStatus_a1 == osOK) {
+	// HEY DONT PUT A MUTEX AROUND THIS BC THIS FUNCTION IS NESTED IN THE MBMSTSTAUS MUTEX ALREADY
+	// IN THE SYSTEM STATE STUFF !!!!
+		mbmsStatus.System_state = FULLY_OPERATIONAL;
+//		osMutexRelease(MBMSStatusMutexHandle);
+//	}
 }
 
 
@@ -453,6 +478,14 @@ uint8_t startupBatteryCheck()
 		osMutexRelease(BatteryInfoMutexHandle);
 		osMutexRelease(MBMSTripMutexHandle);
 	}
+	else {
+		if(Batteryinfo_a1 == osOK) {
+			osMutexRelease(BatteryInfoMutexHandle);
+		}
+		if(MBMSTrip_a2 == osOK) {
+			osMutexRelease(MBMSTripMutexHandle);
+		}
+	}
 
     startup_Check_Counter++;
     return pass;
@@ -532,6 +565,7 @@ void SystemStateMachine()
 			&& (cell_voltages_counter >= MINIMUM_ORION_MESSAGE_RECEIVED))
 		{
 			carState = STARTUP;
+			mbmsStatus.System_state = STARTUP;
 		}
 		break;
 
@@ -555,6 +589,7 @@ void SystemStateMachine()
 			{
 				mbmsHardTrips.ESD_trip = 1;
 
+				//CHECK HEREEE
 				enter_BPS_FAULT();
 			}
 			osMutexRelease(MBMSTripMutexHandle);
@@ -588,6 +623,7 @@ void SystemStateMachine()
 				mbmsPermissions.lv = 0;
 				mbmsPermissions.motor1 = 0;
 				mbmsPermissions.motor2 = 0;
+
 				osMutexRelease(PermissionsMutexHandle);
 			}
 			HAL_GPIO_WritePin(_12V_CAN_State_GPIO_Port, _12V_CAN_State_Pin, GPIO_PIN_RESET); //12V CAN Disabled
@@ -609,6 +645,15 @@ void SystemStateMachine()
 			osMutexRelease(ContactorInfoMutexHandle);
 			osMutexRelease(PermissionsMutexHandle);
 		}
+		else {
+			if(ContactorInfo_a6 == osOK) {
+				osMutexRelease(ContactorInfoMutexHandle);
+			}
+			if(Permissions_a6 == osOK) {
+				osMutexRelease(PermissionsMutexHandle);
+			}
+		}
+
 		// i lowkey split these into 2 chunks tho heh
 		osStatus_t ContactorInfo_a7 = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT );
 		osStatus_t Permissions_a7 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
@@ -617,12 +662,22 @@ void SystemStateMachine()
 
 			if(plugged && (contactorInfo[CHARGE].contactor_close == CLOSE_CONTACTOR))
 			{
+				// CHECK NESTED MUTEX STUFF
 				enter_CHARGING();
 			}
 			osMutexRelease(ContactorInfoMutexHandle);
 			osMutexRelease(PermissionsMutexHandle);
 
 		}
+		else {
+			if(ContactorInfo_a7 == osOK) {
+				osMutexRelease(ContactorInfoMutexHandle);
+			}
+			if(Permissions_a7 == osOK) {
+				osMutexRelease(PermissionsMutexHandle);
+			}
+		}
+
 #if test_with_CCPs
 		Check_ContactorHeartbeats();
 #endif
@@ -725,6 +780,16 @@ void SystemStateMachine()
 			osMutexRelease(MBMSSoftTripMutexHandle);
 			osMutexRelease(PermissionsMutexHandle);
 		}
+		else {
+			if(softtrip_a1 == osOK) {
+				osMutexRelease(MBMSSoftTripMutexHandle);
+			}
+			if(Permissions_a10 == osOK) {
+				osMutexRelease(PermissionsMutexHandle);
+			}
+		}
+
+
 		if(read_MPS() != MPS_ACTIVE)
 		{
 			enter_MPS_DISCONNECTED();
@@ -799,6 +864,24 @@ void Control_Contactors()
 		osMutexRelease(MBMSStatusMutexHandle);
 		osMutexRelease(ContactorCommandMutexHandle);
 	}
+	//////////////////////////////////////////////
+	///////////////////////////////////////////////
+	// NEED TO CHECK ALL NESTED MUTEX STUFF ABOVE THIS LINE !!!!!
+	else {
+		if(ContactorInfo_a11 == osOK) {
+			osMutexRelease(ContactorInfoMutexHandle);
+		}
+		if(Permissions_a11 == osOK) {
+			osMutexRelease(PermissionsMutexHandle);
+		}
+		if(MBMSStatus_a4 == osOK) {
+			osMutexRelease(MBMSStatusMutexHandle);
+		}
+		if(ContactorCommand_a1 ==osOK) {
+			osMutexRelease(ContactorCommandMutexHandle);
+		}
+	}
+
 
 	osStatus_t Permissions_a12 = osMutexAcquire(PermissionsMutexHandle, READING_MUTEX_TIMEOUT );
 	osStatus_t ContactorCommand_a2 = osMutexAcquire(ContactorCommandMutexHandle, UPDATING_MUTEX_TIMEOUT );
@@ -825,6 +908,14 @@ void Control_Contactors()
 		}
 		osMutexRelease(PermissionsMutexHandle);
 		osMutexRelease(ContactorCommandMutexHandle);
+	}
+	else {
+		if(Permissions_a12 == osOK) {
+			osMutexRelease(PermissionsMutexHandle);
+		}
+		if(ContactorCommand_a2 == osOK) {
+			osMutexRelease(ContactorCommandMutexHandle);
+		}
 	}
 }
 
@@ -887,6 +978,17 @@ void Update_TripStruct()
 		osMutexRelease(ContactorInfoMutexHandle);
 		osMutexRelease(BatteryInfoMutexHandle);
 	}
+	else {
+		if(MBMSTrip_a4 == osOK) {
+			osMutexRelease(MBMSTripMutexHandle);
+		}
+		if(ContactorInfo_a12 == osOK) {
+			osMutexRelease(ContactorInfoMutexHandle);
+		}
+		if(Batteryinfo_a2 ==osOK) {
+			osMutexRelease(BatteryInfoMutexHandle);
+		}
+	}
 
 
 	osStatus_t MBMSTrip_a5 = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
@@ -931,7 +1033,19 @@ void Update_TripStruct()
 		osMutexRelease(BatteryInfoMutexHandle);
 		osMutexRelease(MBMSStatusMutexHandle);
 	}
+	else {
+		if(MBMSTrip_a5 == osOK) {
+			osMutexRelease(MBMSTripMutexHandle);
+		}
+		if(Batteryinfo_a3 ==osOK) {
+			osMutexRelease(BatteryInfoMutexHandle);
+		}
+		if(MBMSStatus_a5 == osOK) {
+			osMutexRelease(MBMSStatusMutexHandle);
+		}
+	}
 
+#if test_with_CCPs
 	// Checking contactor disconnected & connected unexpectedly trip
 	osStatus_t ContactorCommand_a3 = osMutexAcquire(ContactorCommandMutexHandle, READING_MUTEX_TIMEOUT);
 	osStatus_t ContactorInfo_a13 = osMutexAcquire(ContactorInfoMutexHandle, READING_MUTEX_TIMEOUT );
@@ -977,7 +1091,18 @@ void Update_TripStruct()
 		osMutexRelease(ContactorInfoMutexHandle);
 		osMutexRelease(MBMSTripMutexHandle);
 	}
-
+	else {
+		if(ContactorCommand_a3 == osOK) {
+			osMutexRelease(ContactorCommandMutexHandle);
+		}
+		if(ContactorInfo_a13 == osOK ) {
+			osMutexRelease(ContactorInfoMutexHandle);
+		}
+		if(MBMSTrip_a6 == osOK) {
+			osMutexRelease(MBMSTripMutexHandle);
+		}
+	}
+#endif
 
 	osStatus_t MBMSTrip_a7 = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
 	if(MBMSTrip_a7 == osOK)
@@ -1052,6 +1177,14 @@ void Update_SoftTripStruct()
 		osMutexRelease(BatteryInfoMutexHandle);
 		osMutexRelease(MBMSSoftTripMutexHandle);
 	}
+	else {
+		if(batteryInfo_a1 == osOK) {
+			osMutexRelease(BatteryInfoMutexHandle);
+		}
+		if(MBMSStrip_a1 == osOK) {
+			osMutexRelease(MBMSSoftTripMutexHandle);
+		}
+	}
 
 
 	/* Checking contactor high-current soft trips */
@@ -1100,6 +1233,18 @@ void Update_SoftTripStruct()
 
 		osMutexRelease(ContactorInfoMutexHandle);
 		osMutexRelease(MBMSSoftTripMutexHandle);
+		osMutexRelease(BatteryInfoMutexHandle);
+	}
+	else {
+		if(contactorInfo_a1 == osOK) {
+			osMutexRelease(ContactorInfoMutexHandle);
+		}
+		if(MBMSStrip_a2 == osOK) {
+			osMutexRelease(MBMSSoftTripMutexHandle);
+		}
+		if(batteryInfo_a2 == osOK) {
+			osMutexRelease(BatteryInfoMutexHandle);
+		}
 	}
 
 	if (trip == 1)
@@ -1140,6 +1285,8 @@ void Check_ContactorHeartbeats()
 				// If the heartbeat is stuck past the timeout, set the matching hard trip
 				if (difference_ms > CONTACTOR_HEARTBEAT_TIMEOUT)
 				{
+					// SUSPISCIOUS MUTEX STUFF HERE
+					/////or maybe its ok idk look at it
 					osMutexRelease(ContactorInfoMutexHandle);
 
 					osStatus_t tripAcquire = osMutexAcquire(MBMSTripMutexHandle, UPDATING_MUTEX_TIMEOUT);
@@ -1190,7 +1337,7 @@ void Check_ContactorHeartbeats()
 
 				osMutexRelease(ContactorInfoMutexHandle);
 			}
-		}
+		} // end is osok mutex stuff
 	}
 	// Enter BPS fault state if any contactor heartbeat timed out.
 	if (BPS_Fault)
@@ -1461,10 +1608,20 @@ void Update_BatteryInfoStruct(void) // updating Orion / battery info struct
 			mbmsStatus.OBMS_CAN_RR = 0;
 			// Trigger a fault/trip due to message timeout
 			mbmsHardTrips.OBMS_msg_timeout_trip = 1;
+
+			osMutexRelease(MBMSStatusMutexHandle);
+			osMutexRelease(MBMSTripMutexHandle);
     	}
-		osMutexRelease(MBMSStatusMutexHandle);
-		osMutexRelease(MBMSTripMutexHandle);
-	}
+    	 else {
+			if (MBMSStatus_a7 == osOK) {
+				osMutexRelease(MBMSStatusMutexHandle);
+			}
+			if (MBMSTrip_a9 == osOK) {
+				osMutexRelease(MBMSTripMutexHandle);
+			}
+    	 }
+
+    }
 }
 
 

@@ -289,7 +289,7 @@ static void MX_FDCAN1_Init(void)
   contactorFilter.FilterIndex		= 3;
   contactorFilter.FilterType 		= FDCAN_FILTER_MASK;
   contactorFilter.FilterConfig	    = FDCAN_FILTER_TO_RXFIFO0;
-  contactorFilter.FilterID1		    = CONTACTOR_ID;
+  contactorFilter.FilterID1		    = CONTACTOR_HEARTBEAT;
   contactorFilter.FilterID2	 	    = CONTACTOR_MASK; // look at CAN.h for contactormask
 
   if(HAL_FDCAN_ConfigFilter(&hfdcan1, &contactorFilter) != HAL_OK)

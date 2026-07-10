@@ -22,6 +22,7 @@ volatile uint32_t batteryqueuefull=0;
 volatile uint32_t contactorqueuefull=0;
 
 volatile uint32_t orion_message_added=0;
+volatile uint32_t contactor_msg_ctr = 0;
 static void CAN_Rx(void);
 
 void CAN_Rx_Task(void *argument)
@@ -55,6 +56,10 @@ static void CAN_Rx()
 
  		 messages_got_yay++;
 
+ 		 if(msg.extendedID == 0x210) {
+			 uint8_t hellooo = 0;
+		 }
+
  		 if(msg.extendedID == PACK_INFO_ID || msg.extendedID == TEMP_INFO_ID || msg.extendedID == CELL_VOLTAGES_ID || msg.extendedID == MIN_MAX_VOLTAGES_ID )
  		 {
  			 status = osMessageQueuePut(BatteryQueueHandle, &msg, 0, osWaitForever);
@@ -72,11 +77,15 @@ static void CAN_Rx()
 
  		 else if((msg.extendedID & CONTACTOR_MASK) == CONTACTOR_HEARTBEAT)
  		 {
+ 			contactor_msg_ctr++;
  			status = osMessageQueuePut(ContactorQueueHandle, &msg, 0, osWaitForever);
  			if(status != osOK)
  			{
  			 	contactorqueuefull++;
  		    }
+ 		 }
+ 		 else if(msg.extendedID == 0x210) {
+ 			 uint8_t hellooo = 0;
  		 }
  	 }
 }
