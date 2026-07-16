@@ -626,8 +626,11 @@ void SystemStateMachine()
 
 				osMutexRelease(PermissionsMutexHandle);
 			}
-			HAL_GPIO_WritePin(_12V_CAN_State_GPIO_Port, _12V_CAN_State_Pin, GPIO_PIN_RESET); //12V CAN Disabled
-
+			HAL_GPIO_WritePin(_12V_CAN_EN_GPIO_Port, _12V_CAN_EN_Pin, GPIO_PIN_RESET); //12V CAN Disabled
+//			if(status != osOK) {
+//				uint8_t uhoh = 1;
+//			}
+			// DHOULDNT THIS BE MAKING A CLICK SOUND BUT I DONT HEAR ANYTHING ?
 		}
 
 		// TODO not a todo but this looks rly good u should do this for when u have nested stuff like how u do
@@ -1412,6 +1415,11 @@ void Update_ContactorInfoStruct() {
 		int16_t 	lineCurrent 			= ((data[0] & 0x80) >> 7) | (data[1] << 1) | ((data[2] & 0x07) << 9); // extract bits 7 to 18
 		int16_t 	chargeCurrent 			= ((data[2] & 0xF8) >> 3) | ((data[3] & 0x7F) >> 6); // extract bits 19 to 30
 
+		if(lineCurrent > 1000)
+		{
+			chargeCurrent = 5;
+		}
+
 		osStatus_t ContactorInfo_a14 = osMutexAcquire(ContactorInfoMutexHandle, UPDATING_MUTEX_TIMEOUT );
 		if(ContactorInfo_a14 == osOK)
 		{
@@ -1498,7 +1506,7 @@ void Update_BatteryInfoStruct(void) // updating Orion / battery info struct
         // Indicate CAN communication is healthy
     		mbmsStatus.OBMS_CAN_RR = 1;
     		//read charge/discharge en from obms
-    		mbmsStatus.charge_enable = read_14V_Charge_EN();
+    		mbmsStatus.charge_enable = read_Charge_EN();
     		mbmsStatus.discharge_enable = read_Discharge_EN();
     		osMutexRelease(MBMSStatusMutexHandle);
     	}

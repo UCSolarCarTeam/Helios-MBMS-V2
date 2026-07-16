@@ -16,7 +16,8 @@ extern osMessageQueueId_t canRxQueueHandle;
 extern osMessageQueueId_t BatteryQueueHandle;
 extern osMessageQueueId_t ContactorQueueHandle;
 
-volatile uint32_t g_rx_cb_hits = 0;
+volatile uint32_t g_rx_cb0_hits = 0;
+volatile uint32_t g_rx_cb1_hits = 0;
 volatile uint32_t messages_got_yay=0;
 volatile uint32_t batteryqueuefull=0;
 volatile uint32_t contactorqueuefull=0;
@@ -32,8 +33,6 @@ void CAN_Rx_Task(void *argument)
 	for(;;)
 	{//RTOS tasks run forever. CAN_Rx_Task will sit in this forever loop always checking for new CAN frames.
 		CAN_Rx();
-		taskTickLastStart += 10;
-		osDelayUntil(taskTickLastStart);
 	}
 }
 
@@ -60,9 +59,9 @@ static void CAN_Rx()
 			 uint8_t hellooo = 0;
 		 }
 
- 		 if(msg.extendedID == PACK_INFO_ID || msg.extendedID == TEMP_INFO_ID || msg.extendedID == CELL_VOLTAGES_ID || msg.extendedID == MIN_MAX_VOLTAGES_ID )
+ 		 if(msg.extendedID == PACK_INFO_ID || msg.extendedID == TEMP_INFO_ID || msg.extendedID == CELL_VOLTAGES_ID)
  		 {
- 			 status = osMessageQueuePut(BatteryQueueHandle, &msg, 0, osWaitForever);
+ 			 status = osMessageQueuePut(BatteryQueueHandle, &msg, 0, 0);
 
  			 if(status != osOK)
  			 {
@@ -74,18 +73,14 @@ static void CAN_Rx()
 				 orion_message_added++;
 			 }
  		 }
-
  		 else if((msg.extendedID & CONTACTOR_MASK) == CONTACTOR_HEARTBEAT)
  		 {
  			contactor_msg_ctr++;
- 			status = osMessageQueuePut(ContactorQueueHandle, &msg, 0, osWaitForever);
+ 			status = osMessageQueuePut(ContactorQueueHandle, &msg, 0, 0);
  			if(status != osOK)
  			{
  			 	contactorqueuefull++;
  		    }
- 		 }
- 		 else if(msg.extendedID == 0x210) {
- 			 uint8_t hellooo = 0;
  		 }
  	 }
 }
@@ -95,7 +90,7 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef * hfdcan, uint32_t RxFifo0ITs
 
 		if ((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) == 0U) //&hfdcan1 is the CAN peripheral, FDCAN_RX/////-FIFO0 tells HALL to check FIFO 0, this function will return a number which will tell us how many messages are currently stored in RX FIFO
 			return;
-	    g_rx_cb_hits++;
+	    g_rx_cb0_hits++;
 
 	    CANmsg msg = {0};
 	    FDCAN_RxHeaderTypeDef rxHeader;
@@ -109,6 +104,11 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef * hfdcan, uint32_t RxFifo0ITs
 		msg.ID						= (uint16_t)(rxHeader.Identifier & 0x7FF); //mask CAN id with 0x7ff to keep the 11 bits
 		msg.DLC						= rxHeader.DataLength;
 
+		if(ID == 0x210 && data[2] = 0x10)
+		{
+			TURNONGPIO23
+		}
+
 		(void)osMessageQueuePut(canRxQueueHandle, &msg, 0, 0);
 }
 
@@ -117,7 +117,7 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef * hfdcan, uint32_t RxFifo1ITs
 
 		if ((RxFifo1ITs & FDCAN_IT_RX_FIFO1_NEW_MESSAGE) == 0U) //&hfdcan1 is the CAN peripheral, FDCAN_RX/////-FIFO0 tells HALL to check FIFO 0, this function will return a number which will tell us how many messages are currently stored in RX FIFO
 			return;
-	    g_rx_cb_hits++;
+	    g_rx_cb1_hits++;
 
 	    CANmsg msg = {0};
 	    FDCAN_RxHeaderTypeDef rxHeader;
