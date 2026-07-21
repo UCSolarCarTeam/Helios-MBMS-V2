@@ -48,32 +48,43 @@ void Shutoff()
 		// ensure charging is disabled
 		HAL_GPIO_WritePin(_14V_Charge_EN_GPIO_Port, _14V_Charge_EN_Pin, !_14V_CHARGE_EN_ACTIVE);
 
-
 		mbmsPermissions.motor1 = 0;
 		mbmsPermissions.motor2 = 0;
-		// wait to open CHECK THIS
-		while((contactorInfo[MOTOR1].contactor_close == CLOSE_CONTACTOR) ||
-			  (contactorInfo[MOTOR2].contactor_close == CLOSE_CONTACTOR))
-		{
-		}
-
-		mbmsPermissions.array = 0;
-		// wait to open CHECK THIS
-		while(contactorInfo[ARRAY].contactor_close == CLOSE_CONTACTOR) {
-
-		}
-
-		mbmsPermissions.lv = 0;
-		// wait to open CHECK THIS
-		while(contactorInfo[LV].contactor_close == CLOSE_CONTACTOR) {
-
-		}
-
 		mbmsPermissions.charge = 0;
-		// wait to open CHECK THIS
-		while(contactorInfo[CHARGE].contactor_close == CLOSE_CONTACTOR) {
+		mbmsPermissions.array = 0;
+		mbmsPermissions.lv = 0;
 
-		}
+
+
+
+//
+//		mbmsPermissions.motor1 = 0;
+//		mbmsPermissions.motor2 = 0;
+//		// wait to open CHECK THIS
+//		while((contactorInfo[MOTOR1].contactor_close == CLOSE_CONTACTOR) ||
+//			  (contactorInfo[MOTOR2].contactor_close == CLOSE_CONTACTOR))
+//		{
+//			osDelay(200);
+//		}
+//
+//		mbmsPermissions.array = 0;
+//		// wait to open CHECK THIS
+//		while(contactorInfo[ARRAY].contactor_close == CLOSE_CONTACTOR) {
+//			osDelay(200);
+//		}
+//
+//		mbmsPermissions.lv = 0;
+//		// wait to open CHECK THIS
+//		while(contactorInfo[LV].contactor_close == CLOSE_CONTACTOR) {
+//			osDelay(200);
+//		}
+//
+//		mbmsPermissions.charge = 0;
+//		// wait to open CHECK THIS
+//		while(contactorInfo[CHARGE].contactor_close == CLOSE_CONTACTOR) {
+//			osDelay(200);
+//
+//		}
 
 		// Disable DCDC1
 		HAL_GPIO_WritePin(DCDC1_EN_GPIO_Port, DCDC1_EN_Pin, !DCDC1_EN_ACTIVE);
@@ -87,7 +98,9 @@ void Shutoff()
 		}
 
 		else {
-			osDelay(200);
+			while(read_MPS() != MPS_ACTIVE) {
+				osDelay(200);
+			}
 			// start thread for startup!!!
 			if(read_MPS() == MPS_ACTIVE) {
 				enter_BOOT();

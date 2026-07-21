@@ -25,7 +25,7 @@
 #define CLOSING_CONTACTOR 1
 
 #define NUM_OF_CNTR 5
-#define CONTACTOR_HEARTBEAT_TIMEOUT 1500 // milliseconds
+#define CONTACTOR_HEARTBEAT_TIMEOUT 2000 // was 1500 // milliseconds
 #define MAX_HEARTBEAT_FAILS 3
 // define here..
 #define FREERTOS_TICK_PERIOD 1.0/configTICK_RATE_HZ
@@ -208,8 +208,8 @@ typedef struct {
 	uint8_t contactor_closing;
 	uint8_t contactor_error;
 	uint8_t contactor_opening_error;
-	uint16_t line_current; // this is uint16 not Uint12, change CAN communication sheet!
-	uint16_t charge_current;
+	int16_t line_current; // this is uint16 not Uint12, change CAN communication sheet!
+	int16_t charge_current;
 	uint32_t heartbeat_check_count;
 
 } Contactor_Info;

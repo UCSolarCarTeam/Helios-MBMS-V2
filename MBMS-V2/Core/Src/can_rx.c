@@ -104,10 +104,10 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef * hfdcan, uint32_t RxFifo0ITs
 		msg.ID						= (uint16_t)(rxHeader.Identifier & 0x7FF); //mask CAN id with 0x7ff to keep the 11 bits
 		msg.DLC						= rxHeader.DataLength;
 
-		if(ID == 0x210 && data[2] = 0x10)
-		{
-			TURNONGPIO23
-		}
+//		if(ID == 0x210 && data[2] = 0x10)
+//		{
+//			TURNONGPIO23
+//		}
 
 		(void)osMessageQueuePut(canRxQueueHandle, &msg, 0, 0);
 }

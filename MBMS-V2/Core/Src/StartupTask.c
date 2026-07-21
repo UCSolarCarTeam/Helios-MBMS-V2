@@ -133,6 +133,7 @@ static void Startup_Flowchart(void)
 			mbmsStatus.Startup_state = STARTUP_MPS_OPEN; /* Change #1 */
 
 //#if DBG
+			uint8_t peepeepoppopp = read_MPS();
 			while (read_MPS() != MPS_ACTIVE)  /* Change #4*/
 			{
 				osDelay(POLL_DELAY_MS);   /* yield CPU while waiting */

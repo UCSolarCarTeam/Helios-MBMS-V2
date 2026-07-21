@@ -12,28 +12,28 @@
 
 /* Battery Limit Defines */
 
-#define HARD_MAX_CELL_VOLTAGE 4.20f //4.20V
-#define HARD_MIN_CELL_VOLTAGE 2.50f // 2.50V
-#define HARD_MAX_TEMP 60
-#define HARD_MIN_TEMP 0
+#define HARD_MAX_CELL_VOLTAGE 4.10f //4.20V // send as 42
+#define HARD_MIN_CELL_VOLTAGE 2.60f // 2.50V
+#define HARD_MAX_TEMP 45
+#define HARD_MIN_TEMP 2
 
 /* Current? */
-#define HARD_MAX_COMMON_CONTACTOR_CURRENT 	300
-#define HARD_MAX_MOTORS_CONTACTOR_CURRENT 	300
-#define HARD_MAX_ARRAY_CONTACTOR_CURRENT 	300
-#define HARD_MAX_LV_CONTACTOR_CURRENT 		300
-#define HARD_MAX_CHARGE_CONTACTOR_CURRENT  	300
-#define NO_CURRENT_THRESHOLD 				3 // (AMPS). So if less than this, consider no current, if more than this, consider there is current
+#define HARD_MAX_COMMON_CONTACTOR_CURRENT 	61.2f
+#define HARD_MAX_MOTORS_CONTACTOR_CURRENT 	61.2f // tenths of an Amp 61.25 amps
+#define HARD_MAX_ARRAY_CONTACTOR_CURRENT 	61.2f
+#define HARD_MAX_LV_CONTACTOR_CURRENT 		61.2f
+#define HARD_MAX_CHARGE_CONTACTOR_CURRENT  	61.2f
+#define NO_CURRENT_THRESHOLD 				3 // (tenths of an AMPS). So if less than this, consider no current, if more than this, consider there is current
 
-#define SOFT_MAX_CELL_VOLTAGE 4.2F
-#define SOFT_MIN_CELL_VOLTAGE 3.7F
+#define SOFT_MAX_CELL_VOLTAGE 3.9F
+#define SOFT_MIN_CELL_VOLTAGE 3.5F
 #define SOFT_MAX_TEMP 40
 #define SOFT_MIN_TEMP 5
-#define SOFT_MAX_COMMON_CONTACTOR_CURRENT 290
-#define SOFT_MAX_MOTORS_CONTACTOR_CURRENT 290
-#define SOFT_MAX_ARRAY_CONTACTOR_CURRENT 290
-#define SOFT_MAX_LV_CONTACTOR_CURRENT 290
-#define SOFT_MAX_CHARGE_CONTACTOR_CURRENT 290
+#define SOFT_MAX_COMMON_CONTACTOR_CURRENT 50.0f //was 290
+#define SOFT_MAX_MOTORS_CONTACTOR_CURRENT 50.0f
+#define SOFT_MAX_ARRAY_CONTACTOR_CURRENT 50.0f
+#define SOFT_MAX_LV_CONTACTOR_CURRENT 50.0f
+#define SOFT_MAX_CHARGE_CONTACTOR_CURRENT 50.0f
 // ASK MILLAINE WHY THERES NO SOFT_MAX_PACK_VOLTAGE
 
 #define MINIMUM_ORION_MESSAGE_RECEIVED 5
@@ -78,6 +78,7 @@ uint8_t waitForFirstHeartbeats();
 uint8_t startupBatteryCheck();
 uint8_t checkPrechargersOpen();
 uint8_t checkContactorsOpen();
+void check_charging();
 
 // Private Switch State Functions
 void enter_BOOT();
