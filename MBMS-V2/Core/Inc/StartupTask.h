@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-
+#include "MBMS.h"
 
 
 
@@ -28,7 +28,9 @@ typedef enum
     STARTUP_12V_CAN_ON,              // NEW: 12V CAN enabled
 
     STARTUP_MOTOR1_ENABLED, // motor permission granted
+#if motor2def
 	STARTUP_MOTOR2_ENABLED,
+#endif
 	STARTUP_ARRAY_ENABLED,          // NEW: array permission granted
 
     STARTUP_DONE                   // startup done

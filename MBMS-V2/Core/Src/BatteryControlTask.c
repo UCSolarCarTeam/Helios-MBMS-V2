@@ -16,6 +16,7 @@
 #include <stdlib.h>
 
 #define test_with_CCPs 1 // comment out the trips for heartbeats..
+//#define motor2def 0 //if theres a second motor, remember change NUM_OF_CNTR def :)
 
 uint32_t BCT_start_tick = 0;
 uint32_t BCT_end_tick = 0;
@@ -72,7 +73,9 @@ void perms_init()
 		// TODO: set permission variables here
 		mbmsPermissions.lv = 0;
 		mbmsPermissions.motor1 = 0;
+#if motor2def
 		mbmsPermissions.motor2 = 0;
+#endif
 		mbmsPermissions.array = 0;
 		mbmsPermissions.charge = 0;
 		osMutexRelease(PermissionsMutexHandle);
@@ -386,9 +389,11 @@ uint8_t waitForFirstHeartbeats()
 					case MOTOR1:
 						mbmsHardTrips.MT1_no_heartbeat_trip = 1;
 						break;
+#if motor2def
 					case MOTOR2:
 						mbmsHardTrips.MT2_no_heartbeat_trip = 1;
 						break;
+#endif
 					case ARRAY:
 						mbmsHardTrips.AR_no_heartbeat_trip = 1;
 						break;
@@ -679,7 +684,9 @@ void SystemStateMachine()
 			{
 				mbmsPermissions.lv = 1;
 				mbmsPermissions.motor1 = 1;
+#if motor2def
 				mbmsPermissions.motor2 = 1;
+#endif
 				osMutexRelease(PermissionsMutexHandle);
 			}
 		}
@@ -689,7 +696,10 @@ void SystemStateMachine()
 		if(ContactorInfo_a9 == osOK)
 		{
 			if((contactorInfo[LV].contactor_close == CLOSE_CONTACTOR) && (contactorInfo[MOTOR1].contactor_close == CLOSE_CONTACTOR)
-				&& (contactorInfo[MOTOR2].contactor_close == CLOSE_CONTACTOR))
+#if motor2def
+					&& (contactorInfo[MOTOR2].contactor_close == CLOSE_CONTACTOR)
+#endif
+				)
 			{
 				enter_FULLY_OPERATIONAL();
 			}
@@ -731,13 +741,17 @@ void SystemStateMachine()
 				mbmsPermissions.charge = 0;
 				mbmsPermissions.array  = 0;
 				mbmsPermissions.motor1 = 0;
+#if motor2def
 				mbmsPermissions.motor2 = 0;
+#endif
 
 			}
 			if(mbmsSoftTrips.Low_volt_cell_Strip == 1)
 			{
 				mbmsPermissions.motor1 = 0;
+#if motor2def
 				mbmsPermissions.motor2 = 0;
+#endif
 				mbmsPermissions.lv = 0;
 			}
 			osMutexRelease(MBMSSoftTripMutexHandle);
@@ -784,7 +798,9 @@ void check_charging() {
 			{
 				mbmsPermissions.lv = 0;
 				mbmsPermissions.motor1 = 0;
+#if motor2def
 				mbmsPermissions.motor2 = 0;
+#endif
 
 				osMutexRelease(PermissionsMutexHandle);
 			}
@@ -807,8 +823,6 @@ void check_charging() {
 				{
 					mbmsPermissions.lv = 1;
 					mbmsPermissions.motor1 = 1;
-					mbmsPermissions.motor2 = 1;
-
 					osMutexRelease(PermissionsMutexHandle);
 				}
 			}
@@ -830,8 +844,8 @@ void check_charging() {
 		osStatus_t Permissions_a8 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
 		if(ContactorInfo_a6 == osOK && Permissions_a8 == osOK)
 		{
-			if(plugged && (contactorInfo[LV].contactor_close == OPEN_CONTACTOR) && (contactorInfo[MOTOR1].contactor_close == OPEN_CONTACTOR)
-				&& (contactorInfo[MOTOR2].contactor_close == OPEN_CONTACTOR))
+			if(plugged && (contactorInfo[LV].contactor_close == OPEN_CONTACTOR) &&
+					(contactorInfo[MOTOR1].contactor_close == OPEN_CONTACTOR))
 			{
 				HAL_GPIO_WritePin(_14V_Charge_EN_GPIO_Port, _14V_Charge_EN_Pin, CHARGE_ENABLE_ACTIVE); //ENABLE THE CHARGER
 				mbmsPermissions.charge = 1;
@@ -915,10 +929,6 @@ void Control_Contactors()
 			{
 				contactorCommand.motor1 = CLOSE_CONTACTOR;
 			}
-			else if ((mbmsPermissions.motor2) && (contactorInfo[MOTOR2].contactor_close != CLOSE_CONTACTOR ) && (mbmsStatus.discharge_enable == DISCHARGE_ENABLE_ACTIVE))
-			{
-				contactorCommand.motor2 = CLOSE_CONTACTOR;
-			}
 			else if ((mbmsPermissions.array) && (contactorInfo[ARRAY].contactor_close != CLOSE_CONTACTOR) && (mbmsStatus.charge_enable == CHARGE_ENABLE_ACTIVE))
 			{
 				contactorCommand.array = CLOSE_CONTACTOR;
@@ -963,11 +973,11 @@ void Control_Contactors()
 		if (!mbmsPermissions.motor1){
 			contactorCommand.motor1 = OPEN_CONTACTOR;
 		}
-
+#if motor2def
 		if (!mbmsPermissions.motor2){
 			contactorCommand.motor2 = OPEN_CONTACTOR;
 		}
-
+#endif
 		if (!mbmsPermissions.array){
 			contactorCommand.array = OPEN_CONTACTOR;
 		}
@@ -1013,11 +1023,13 @@ void Update_TripStruct()
 			BPS_Fault = 1;
 		}
 
+#if motor2def
 		if(abs(contactorInfo[MOTOR2].line_current) > HARD_MAX_MOTORS_CONTACTOR_CURRENT)
 		{
 			mbmsHardTrips.MT2_high_cur_trip = 1;
 			BPS_Fault = 1;
 		}
+#endif
 
 		if(abs(contactorInfo[ARRAY].line_current) > HARD_MAX_ARRAY_CONTACTOR_CURRENT)
 		{
@@ -1125,7 +1137,9 @@ void Update_TripStruct()
 		/* Contactor disconnected unexpectedly */
 		/* To check, we compare a minimum current draw with the state of the contactor */
 		if(((contactorCommand.motor1 == CLOSE_CONTACTOR) 	 && 	(abs(contactorInfo[MOTOR1].line_current) < NO_CURRENT_THRESHOLD)) 	 ||
+#if motor2def
 		  ((contactorCommand.motor2 == CLOSE_CONTACTOR) 	 && 	(abs(contactorInfo[MOTOR2].line_current) < NO_CURRENT_THRESHOLD)) 	 ||
+#endif
 		  ((contactorCommand.array == CLOSE_CONTACTOR) 		 && 	(abs(contactorInfo[ARRAY].line_current) < NO_CURRENT_THRESHOLD)) 	 ||
 		  ((contactorCommand.LV == CLOSE_CONTACTOR) 		 && 	(abs(contactorInfo[LV].line_current) < NO_CURRENT_THRESHOLD)) 		 ||
 		  ((contactorCommand.charge == CLOSE_CONTACTOR) 	 && 	(abs(contactorInfo[CHARGE].line_current) < NO_CURRENT_THRESHOLD))
@@ -1138,7 +1152,9 @@ void Update_TripStruct()
 
 		/* Contactor connected unexpectedly trip */
 		if(((contactorCommand.motor1 == OPEN_CONTACTOR) 	&& 	(abs(contactorInfo[MOTOR1].line_current) >= NO_CURRENT_THRESHOLD))	||
+#if motor2def
 		  ((contactorCommand.motor2 == OPEN_CONTACTOR) 	&& 	(abs(contactorInfo[MOTOR2].line_current) >= NO_CURRENT_THRESHOLD))		||
+#endif
 		  ((contactorCommand.array == OPEN_CONTACTOR) 	&& 	(abs(contactorInfo[ARRAY].line_current) >= NO_CURRENT_THRESHOLD)) 	 	||
 		  ((contactorCommand.LV == OPEN_CONTACTOR) 		&& 	(abs(contactorInfo[LV].line_current) >= NO_CURRENT_THRESHOLD)) 		 	||
 		  ((contactorCommand.charge == OPEN_CONTACTOR) 	&& 	(abs(contactorInfo[CHARGE].line_current) >= NO_CURRENT_THRESHOLD)))
@@ -1276,11 +1292,13 @@ void Update_SoftTripStruct()
 			trip = 1;
 		}
 
+#if motor2def
 		if (abs(contactorInfo[MOTOR2].line_current) > SOFT_MAX_MOTORS_CONTACTOR_CURRENT)
 		{
 			mbmsSoftTrips.MT2_high_cur_Strip = 1;
 			trip = 1;
 		}
+#endif
 
 		if (abs(contactorInfo[ARRAY].line_current) > SOFT_MAX_ARRAY_CONTACTOR_CURRENT)
 		{
@@ -1382,9 +1400,11 @@ void Check_ContactorHeartbeats()
 								BPS_Fault = 1;
 								break;
 
+#if motor2def
 							case MOTOR2:
 								mbmsHardTrips.MT2_no_heartbeat_trip = 1;
 								break;
+#endif
 
 							case ARRAY:
 								mbmsHardTrips.AR_no_heartbeat_trip = 1;

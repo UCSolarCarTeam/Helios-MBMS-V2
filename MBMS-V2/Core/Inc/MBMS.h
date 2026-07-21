@@ -24,13 +24,16 @@
 #define CLOSE_CONTACTOR 1
 #define CLOSING_CONTACTOR 1
 
-#define NUM_OF_CNTR 5
+#define NUM_OF_CNTR 4
 #define CONTACTOR_HEARTBEAT_TIMEOUT 2000 // was 1500 // milliseconds
 #define MAX_HEARTBEAT_FAILS 3
 // define here..
 #define FREERTOS_TICK_PERIOD 1.0/configTICK_RATE_HZ
 // there are 1000 ticks per second btw
 // so there is 1 tick every 1 millisecond
+
+#define motor2def 0 //if theres a second motor, remember change NUM_OF_CNTR def :) and canmessagesender task need to update !!!!
+
 
 /* Enums */
 //typedef enum // match with the proper CAN ID's
@@ -45,7 +48,9 @@
 enum Contactors{
 	LV = 0,
 	MOTOR1,
+#if motor2def
 	MOTOR2,
+#endif
 	ARRAY,
 	CHARGE
 };
@@ -76,7 +81,9 @@ enum carStates {
 typedef struct {
 	uint8_t lv;
 	uint8_t motor1;
+#if motor2def
 	uint8_t motor2;
+#endif
 	uint8_t array;
 	uint8_t charge;
 	uint8_t startupDone;
@@ -89,7 +96,9 @@ typedef struct {
 typedef struct{
 	uint8_t common;
 	uint8_t motor1;
+#if motor2def
 	uint8_t motor2;
+#endif
 	uint8_t array;
 	uint8_t LV;
 	uint8_t charge;
@@ -161,7 +170,9 @@ typedef struct
 	uint8_t CMN_high_cur_trip;
 	uint8_t LV_high_cur_trip;
 	uint8_t MT1_high_cur_trip;
+#if motor2def
 	uint8_t MT2_high_cur_trip;
+#endif
 	uint8_t AR_high_cur_trip;
 	uint8_t CHG_high_cur_trip;
 	uint8_t Reverse_cur_trip;
@@ -171,7 +182,9 @@ typedef struct
 	uint8_t CMN_no_heartbeat_trip;
 	uint8_t LV_no_heartbeat_trip;
 	uint8_t MT1_no_heartbeat_trip;
+#if motor2def
 	uint8_t MT2_no_heartbeat_trip;
+#endif
 	uint8_t AR_no_heartbeat_trip;
 	uint8_t CHG_no_heartbeat_trip;
 	uint8_t ESD_trip;
@@ -189,7 +202,9 @@ typedef struct
 	uint8_t CMN_high_cur_Strip;
 	uint8_t LV_high_cur_Strip;
 	uint8_t MT1_high_cur_Strip;
+#if motor2def
 	uint8_t MT2_high_cur_Strip;
+#endif
 	uint8_t AR_high_cur_Strip;
 	uint8_t CHG_high_cur_Strip;
 	uint8_t High_temp_Strip;

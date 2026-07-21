@@ -87,6 +87,7 @@ static void give_motor1_perms(void)
 	osMutexRelease(PermissionsMutexHandle);
 }
 
+#if motor2def
 static void give_motor2_perms(void)
 {
 	osStatus_t Permissions_a2 = osMutexAcquire(PermissionsMutexHandle, UPDATING_MUTEX_TIMEOUT );
@@ -96,7 +97,7 @@ static void give_motor2_perms(void)
 	}
 	osMutexRelease(PermissionsMutexHandle);
 }
-
+#endif
 
 
 static void give_array_perms(void)
@@ -221,8 +222,10 @@ static void Startup_Flowchart(void)
    			 /* Permissions: Motor contactor */
    			 give_motor1_perms();
    			 mbmsStatus.Startup_state = STARTUP_MOTOR1_ENABLED;
+#if motor2def
    			 give_motor2_perms();
    			 mbmsStatus.Startup_state = STARTUP_MOTOR2_ENABLED;
+#endif
 
    			 /* -------------------------------------------------------------------------
    			  * Permissions: Array contactor

@@ -49,7 +49,9 @@ void Shutoff()
 		HAL_GPIO_WritePin(_14V_Charge_EN_GPIO_Port, _14V_Charge_EN_Pin, !_14V_CHARGE_EN_ACTIVE);
 
 		mbmsPermissions.motor1 = 0;
+#if motor2def
 		mbmsPermissions.motor2 = 0;
+#endif
 		mbmsPermissions.charge = 0;
 		mbmsPermissions.array = 0;
 		mbmsPermissions.lv = 0;
